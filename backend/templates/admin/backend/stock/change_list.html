@@ -1,0 +1,36 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    <li>
+        <button id="populate-stocks-btn" class="button" style="margin-left: 8px;">Populate Stocks</button>
+    </li>
+{% endblock %}
+
+{% block admin_change_list_document_ready %}
+{{ block.super }}
+<script>
+    django.jQuery(document).ready(function() {
+        django.jQuery('#populate-stocks-btn').click(function(e) {
+            e.preventDefault();
+            if (confirm('Are you sure you want to populate/update stocks?')) {
+                django.jQuery.ajax({
+                    url: '{% url "populate_stocks" %}',
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': django.jQuery('[name=csrfmiddlewaretoken]').val()
+                    },
+                    success: function(response) {
+                        alert(response.message);
+                        window.location.reload();
+                    },
+                    error: function(xhr) {
+                        alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Failed to populate stocks'));
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

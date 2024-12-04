@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-4">Your Watchlist</h1>
+            {% if not stocks %}
+                <div class="alert alert-info">
+                    Your watchlist is empty. Browse our <a href="{% url 'stock_list' %}">stocks</a> to add some!
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if stocks %}
+    <div class="row">
+        {% for stock in stocks %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ stock.code }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">
+                        {% if stock.name %}
+                            {{ stock.name }}
+                        {% else %}
+                            <span class="text-muted">No name available</span>
+                        {% endif %}
+                    </h6>
+                    <div class="mt-3">
+                        <a href="{% url 'stock_detail' stock.code %}" class="btn btn-primary">View Details</a>
+                        <a href="{% url 'remove_from_watchlist' stock.code %}" class="btn btn-outline-danger">Remove</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <a href="{% url 'stock_list' %}" class="btn btn-lg btn-primary">Browse All Stocks</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

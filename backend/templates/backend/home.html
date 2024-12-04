@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-4 text-center">Popular Stocks</h1>
+            <p class="lead text-center">Track and manage your favorite stocks with Crystal</p>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for stock in stocks %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ stock.code }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">
+                        {% if stock.name %}
+                            {{ stock.name }}
+                        {% else %}
+                            <span class="text-muted">No name available</span>
+                        {% endif %}
+                    </h6>
+                    <a href="{% url 'stock_detail' stock.code %}" class="btn btn-primary">View Details</a>
+                    {% if user.is_authenticated %}
+                        {% if stock in user.app_user.watchlist.all %}
+                            <a href="{% url 'remove_from_watchlist' stock.code %}" class="btn btn-outline-danger">Remove from Watchlist</a>
+                        {% else %}
+                            <a href="{% url 'add_to_watchlist' stock.code %}" class="btn btn-outline-success">Add to Watchlist</a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <a href="{% url 'stock_list' %}" class="btn btn-lg btn-primary">View All Stocks</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'watchlist' %}" class="btn btn-lg btn-success">View Your Watchlist</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

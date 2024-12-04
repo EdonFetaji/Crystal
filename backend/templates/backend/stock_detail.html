@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="container mx-auto p-6">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold mb-4">Stock Code: <span id="stock_code" class="text-blue-600">{{ stock.code }}</span></h1>
+        </div>
+
+        <!-- Technical Analysis Section -->
+        <div id="technical-chart" class="bg-gray-800 text-white p-6 rounded-xl shadow-lg mb-8" style="min-height: 600px;">
+            <p class="text-center text-2xl text-gray-400">Loading chart...</p>
+        </div>
+
+        <div id="technical-metrics" class="bg-white p-8 rounded-xl shadow-lg mb-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Technical Analysis</h2>
+            <div class="space-y-4 text-xl text-gray-700">
+                <p>SMA 20: <span class="font-semibold text-gray-900" id="sma20">Loading...</span></p>
+                <p>SMA 50: <span class="font-semibold text-gray-900" id="sma50">Loading...</span></p>
+                <p>RSI: <span class="font-semibold text-gray-900" id="rsi">Loading...</span></p>
+            </div>
+        </div>
+
+        <!-- Fundamental Analysis Section -->
+        <div id="fundamental-metrics" class="bg-white p-8 rounded-xl shadow-lg">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Fundamental Analysis</h2>
+            <div class="space-y-8">
+                <div class="mb-8">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Turnover Trends</h3>
+                    <p class="text-xl">Average Turnover: <span class="font-medium text-gray-900" id="avg-turnover">Loading...</span></p>
+                    <p class="text-xl">Maximum Turnover: <span class="font-medium text-gray-900" id="max-turnover">Loading...</span></p>
+                    <p class="text-xl">Minimum Turnover: <span class="font-medium text-gray-900" id="min-turnover">Loading...</span></p>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Volume Trends</h3>
+                    <p class="text-xl">Total Volume: <span class="font-medium text-gray-900" id="total-volume">Loading...</span></p>
+                    <p class="text-xl">Average Volume: <span class="font-medium text-gray-900" id="avg-volume">Loading...</span></p>
+                    <p class="text-xl">Maximum Volume: <span class="font-medium text-gray-900" id="max-volume">Loading...</span></p>
+                    <p class="text-xl">Minimum Volume: <span class="font-medium text-gray-900" id="min-volume">Loading...</span></p>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Volatility</h3>
+                    <p class="text-xl">Average Volatility: <span class="font-medium text-gray-900" id="avg-volatility">Loading...</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof Plotly === 'undefined') {
+                console.error("Plotly is not loaded. Ensure the Plotly library is properly included.");
+                return;
+            }
+
+            const stockCode = document.getElementById('stock_code').textContent;
+
+            // Fetch Technical Analysis Data
+            fetch(`/stocks/${stockCode}/technical-analysis/`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.plot) {
+                        throw new Error("No plot data available.");
+                    }
+
+                    const plotData = JSON.parse(data.plot);
+                    Plotly.newPlot('technical-chart', plotData.data, plotData.layout);
+
+                    const metrics = data.analysis || {};
+                    document.getElementById('technical-metrics').innerHTML = `
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6">Technical Analysis</h2>
+                        <div class="space-y-4 text-xl text-gray-700">
+                            <p>SMA 20: <span class="font-semibold text-gray-900">${metrics.trend?.sma20 || 'N/A'}</span></p>
+                            <p>SMA 50: <span class="font-semibold text-gray-900">${metrics.trend?.sma50 || 'N/A'}</span></p>
+                            <p>RSI: <span class="font-semibold text-gray-900">${metrics.momentum?.rsi || 'N/A'}</span></p>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error("Error loading technical analysis:", error);
+                    document.getElementById('technical-chart').innerHTML = `
+                        <div class="alert alert-danger">
+                            Error loading technical analysis: ${error.message}
+                        </div>
+                    `;
+                });
+
+            // Fetch Fundamental Analysis Data
+            fetch(`/stocks/${stockCode}/fundamental-analysis/`)
+                .then(response => response.json())
+                .then(data => {
+                    const turnoverTrends = data.turnover_trends || {};
+                    const volumeTrends = data.volume_trends || {};
+                    const volatility = data.volatility || {};
+
+                    // Display Fundamental Analysis Data
+                    document.getElementById('fundamental-metrics').innerHTML = `
+                        <h2 class="text-3xl font-bold text-gray-800 mb-6">Fundamental Analysis</h2>
+                        <div class="space-y-8">
+                            <div class="mb-8">
+                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Turnover Trends</h3>
+                                <p class="text-xl">Average Turnover: <span class="font-medium text-gray-900">${turnoverTrends['Average Turnover'] || 'N/A'}</span></p>
+                                <p class="text-xl">Maximum Turnover: <span class="font-medium text-gray-900">${turnoverTrends['Maximum Turnover'] || 'N/A'}</span></p>
+                                <p class="text-xl">Minimum Turnover: <span class="font-medium text-gray-900">${turnoverTrends['Minimum Turnover'] || 'N/A'}</span></p>
+                            </div>
+
+                            <div class="mb-8">
+                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Volume Trends</h3>
+                                <p class="text-xl">Total Volume: <span class="font-medium text-gray-900">${volumeTrends['Total Volume'] || 'N/A'}</span></p>
+                                <p class="text-xl">Average Volume: <span class="font-medium text-gray-900">${volumeTrends['Average Volume'] || 'N/A'}</span></p>
+                                <p class="text-xl">Maximum Volume: <span class="font-medium text-gray-900">${volumeTrends['Maximum Volume'] || 'N/A'}</span></p>
+                                <p class="text-xl">Minimum Volume: <span class="font-medium text-gray-900">${volumeTrends['Minimum Volume'] || 'N/A'}</span></p>
+                            </div>
+
+                            <div class="mb-8">
+                                <h3 class="text-2xl font-semibold text-gray-800 mb-4">Volatility</h3>
+                                <p class="text-xl">Average Volatility: <span class="font-medium text-gray-900">${volatility['Average Volatility'] || 'N/A'}</span></p>
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error("Error loading fundamental analysis:", error);
+                    document.getElementById('fundamental-metrics').innerHTML = `
+                        <div class="alert alert-danger">
+                            Error loading fundamental analysis: ${error.message}
+                        </div>
+                    `;
+                });
+        });
+    </script>
+{% endblock %}
