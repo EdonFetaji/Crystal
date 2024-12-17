@@ -1,47 +1,47 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Header Section -->
-    <div class="mb-8 text-center">
-        <h1 class="text-4xl font-bold mb-4">All Stocks</h1>
-    </div>
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header Section -->
+        <div class="mb-8 text-center">
+            <h1 class="text-4xl font-bold mb-4">All Stocks</h1>
+            <p class="text-gray-600">Browse the latest stocks available.</p>
+        </div>
 
-    <!-- Table Section -->
-    <div class="overflow-x-auto shadow-lg rounded-lg">
-        <table class="min-w-full bg-white text-gray-800">
-            <thead class="bg-blue-600 text-white">
-                <tr>
-                    <th class="px-4 py-3 text-left">Code</th>
-                    <th class="px-4 py-3 text-left">Name</th>
-                    <th class="px-4 py-3 text-left">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                {% for stock in stocks %}
-                <tr class="hover:bg-blue-50 transition-all duration-300 ease-in-out">
-                    <td class="px-4 py-3">{{ stock.code }}</td>
-                    <td class="px-4 py-3">
-                        {% if stock.name %}
-                            {{ stock.name }}
-                        {% else %}
-                            <span class="text-gray-400">No name available</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-4 py-3 space-x-2">
-                        <a href="{% url 'stock_detail' stock.code %}" class="bg-blue-500 text-white py-2 px-4 rounded-md text-sm hover:bg-blue-600 transition duration-300">View Details</a>
-                        {% if user.is_authenticated %}
-                            {% if stock in user.app_user.watchlist.all %}
-                                <a href="{% url 'remove_from_watchlist' stock.code %}" class="border border-red-500 text-red-500 py-2 px-4 rounded-md text-sm hover:bg-red-500 hover:text-white transition duration-300">Remove</a>
-                            {% else %}
-                                <a href="{% url 'add_to_watchlist' stock.code %}" class="border border-green-500 text-green-500 py-2 px-4 rounded-md text-sm hover:bg-green-500 hover:text-white transition duration-300">Add</a>
-                            {% endif %}
-                        {% endif %}
-                    </td>
-                </tr>
+        <!-- Search Bar -->
+        <form method="get" class="mb-6 flex justify-center">
+            <input type="text" name="q" placeholder="Search stocks..."
+                   class="border border-gray-300 px-4 py-2 rounded-md focus:outline-none w-1/2">
+            <button type="submit"
+                    class="ml-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-300">
+                Search
+            </button>
+        </form>
+
+        <!-- Table Section -->
+        <div class="overflow-x-auto shadow-lg rounded-lg">
+            <div class="min-w-full bg-white text-gray-800 border border-gray-200 grid grid-cols-3 gap-3">
+
+                {% for stock in page_obj %}
+                    {% include 'components/stock_card.html' with stock=stock %}
+                {% empty %}
+                        <p class="px-6 py-4 text-center text-gray-500">
+                            No stocks found. Check back later!</p>
                 {% endfor %}
-            </tbody>
-        </table>
+
+
+            </div>
+        </div>
+
+        <!-- Pagination Section -->
+        <div class="mt-6 flex justify-center items-center">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="text-blue-500 hover:underline">Previous</a>
+            {% endif %}
+            <span class="mx-4 text-gray-600">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="text-blue-500 hover:underline">Next</a>
+            {% endif %}
+        </div>
     </div>
-</div>
 {% endblock %}

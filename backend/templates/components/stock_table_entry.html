@@ -1,0 +1,58 @@
+<tr class="border-b hover:bg-gray-50 transition duration-300">
+    <!-- Logo, Code, and Name -->
+    <td class="px-6 py-4 whitespace-nowrap flex items-center">
+        <img src="https://via.placeholder.com/40" alt="Stock Logo" class="w-8 h-8 rounded-full mr-3" />
+        <div>
+            <span class="font-semibold text-gray-800">{{ stock.code }}</span>
+            <span class="block text-sm text-gray-500">{{ stock.name|default:"No name available" }}</span>
+        </div>
+    </td>
+
+    <!-- Price -->
+    <td class="px-6 py-4 whitespace-nowrap text-gray-800 font-medium">
+        {% if stock.price %}
+            ${{ stock.price }}
+        {% else %}
+            --
+        {% endif %}
+    </td>
+
+    <!-- Change (Percent) -->
+    <td class="px-6 py-4 whitespace-nowrap font-medium">
+        {% if stock.change is not None %}
+            <span class="{% if stock.change >= 0 %}text-green-500{% else %}text-red-500{% endif %}">
+                {% if stock.change >= 0 %}+{% endif %}{{ stock.change }}%
+            </span>
+        {% else %}
+            <span class="text-gray-400">--</span>
+        {% endif %}
+    </td>
+
+    <!-- Placeholder for 24h Volume (Replace with real data if applicable) -->
+    <td class="px-6 py-4 whitespace-nowrap text-gray-800 font-medium">
+        $70.94B
+    </td>
+
+    <!-- Placeholder for Market Cap -->
+    <td class="px-6 py-4 whitespace-nowrap text-gray-800 font-medium">
+        $2,106.32B
+    </td>
+
+    <!-- Actions -->
+    <td class="px-6 py-4 whitespace-nowrap flex items-center space-x-2">
+        <a href="{% url 'stock_detail' stock.code %}" class="text-gray-500 hover:text-blue-500 transition duration-300">
+            🔍
+        </a>
+        {% if user.is_authenticated %}
+            {% if stock in user.app_user.watchlist.all %}
+                <a href="{% url 'remove_from_watchlist' stock.code %}" class="text-red-500 hover:text-red-700 transition duration-300">
+                    ➖
+                </a>
+            {% else %}
+                <a href="{% url 'add_to_watchlist' stock.code %}" class="text-green-500 hover:text-green-700 transition duration-300">
+                    ➕
+                </a>
+            {% endif %}
+        {% endif %}
+    </td>
+</tr>

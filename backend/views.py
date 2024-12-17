@@ -18,6 +18,7 @@ from ta.momentum import RSIIndicator
 from ta.volatility import BollingerBands
 from plotly.subplots import make_subplots
 from botocore.exceptions import ClientError
+from django.core.paginator import Paginator
 from django.core.management import call_command
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
@@ -43,9 +44,14 @@ def home(request):
 
 
 # Stock list view
+
 def stock_list(request):
-    stocks = Stock.objects.all().order_by('code')
-    return render(request, 'backend/stock_list.html', {'stocks': stocks})
+    stocks = Stock.objects.all()
+    paginator = Paginator(stocks, 10)  # Show 10 stocks per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'backend/stock_list.html', {'page_obj': page_obj})
+
 
 
 # Stock detail view

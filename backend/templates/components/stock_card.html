@@ -1,0 +1,42 @@
+<div class=" flex flex-col align-center bg-white shadow-md rounded-lg overflow-hidden  p-6 group">
+    <div class="flex justify-between items-center">
+        <h6 class="text-gray-600 mb-4">
+            {% if stock.name %}
+                {{ stock.name }}
+            {% else %}
+                <span class="text-gray-400">Name N/A</span>
+            {% endif %}
+        </h6>
+        {% if user.is_authenticated %}
+            <form method="post" action="
+                    {% if stock in user.app_user.watchlist.all %}{% url 'remove_from_watchlist' stock.code %}{% else %}{% url 'add_to_watchlist' stock.code %}{% endif %}">
+                {% csrf_token %}
+                <!-- Watchlist Button with Hidden Input -->
+                <input type="hidden" name="stock_code" value="{{ stock.code }}">
+                <button type="submit" class="focus:outline-none">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="h-6 w-6 {% if stock in user.app_user.watchlist.all %}text-yellow-500{% else %}text-gray-400 hover:text-gray-500{% endif %}  hover:scale-125 transform duration-300 ease-in-out"
+                         fill="currentColor" viewBox="0 0 24 24" stroke="none">
+                        <path d="M12 .587l3.668 7.451 8.217 1.196-5.941 5.788 1.403 8.178L12 18.896l-7.347 3.871 1.403-8.178L.115 9.234l8.217-1.196L12 .587z"/>
+                    </svg>
+                </button>
+            </form>
+        {% endif %}
+    </div>
+
+        <h5 class="text-2xl font-bold flex-1">{{ stock.code }}</h5>
+
+    <div class="flex justify-between items-center" >
+{#    style="background-color:#1f2937 "#}
+        <span class="rounded-lg px-1 py-2 border-2 border-gray-300"  >
+            <span class=" font-semibold{% if stock.change > 0 %} text-red-500 {% elif stock.change == 0 %} text-green-500{% else %}text-green-500{% endif %} ">
+            {{ stock.change }}
+            </span>
+
+        </span>
+
+        <a href="{% url 'stock_detail' stock.code %}" class="group-hover:scale-125 transform duration-300 ease-in-out">
+            <img width="38" height="38" src="https://img.icons8.com/laces/64/arrow.png" alt="arrow"/>
+        </a>
+    </div>
+</div>
