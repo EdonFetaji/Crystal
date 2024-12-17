@@ -37,7 +37,7 @@ def stock_list(request):
 # Stock detail view
 def stock_detail(request, code):
     stock = get_object_or_404(Stock, code=code)
-    return render(request, 'backend/stock_detail.html',{'stock': stock})
+    return render(request, 'backend/stock_detail.html', {'stock': stock})
 
 
 # Helper function for fetching analysis data
@@ -55,6 +55,28 @@ def fetch_analysis_data(request, key, analysis_function):
 def watchlist(request):
     stocks = request.user.app_user.watchlist.all().order_by('code')
     return render(request, 'backend/watchlist.html', {'stocks': stocks})
+
+
+@login_required()
+def profile(request):
+    all_stocks = Stock.objects.all()
+    stocks_watchlist = request.user.app_user.watchlist.all().order_by('code')
+    return render(request, 'backend/profile.html', {'stocks': stocks_watchlist, 'all_stocks': all_stocks}, )
+
+
+@login_required
+def add_to_watchlist_from_profile(request):
+    if request.method == "POST":
+        stock_code = request.POST.get('stock_code')
+        stock = Stock.objects.filter(code=stock_code).first()
+
+        if stock:
+            request.user.app_user.watchlist.add(stock)
+            messages.success(request, f"{stock.code} has been added to your watchlist.")
+        else:
+            messages.error(request, "Stock not found. Please check the symbol.")
+
+    return redirect('profile')
 
 
 @login_required
@@ -76,7 +98,6 @@ def remove_from_watchlist(request, code):
 access_key = 'A4NKUO1LSJ1BPPX8KF65'
 secret_key = 'mlGRIVvhK4hVlBmIZ7SlfYPqaFzjfpnUcwyD9YFW'
 bucket_name = 'mkdstocks'
-
 
 
 def get_stock_historical_data_view(code):
@@ -155,6 +176,7 @@ from ta.volatility import BollingerBands
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 
+
 def technical_analysis(request, code):
     try:
         # Fetch stock data
@@ -201,8 +223,9 @@ def technical_analysis(request, code):
         import traceback
         traceback.print_exc()
         return JsonResponse({'error': str(e)}, status=500)
-def fundamental_analysis(request, code):
 
+
+def fundamental_analysis(request, code):
     def calculate_price_trends(df):
         """
         Calculate price trends including percentage change over time.
@@ -262,6 +285,7 @@ def fundamental_analysis(request, code):
         'volume_trends': volume_trends,
         'volatility': volatility,
     })
+
 
 # Admin-specific populate stocks
 @staff_member_required

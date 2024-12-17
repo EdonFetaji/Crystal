@@ -3,44 +3,77 @@
 {% block title %}Login - Crystal{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="text-center">Login</h2>
-                </div>
-                <div class="card-body">
-                    <form method="post" novalidate>
-                        {% csrf_token %}
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
-                            {{ form.username }}
-                            {% if form.username.errors %}
-                                <div class="alert alert-danger mt-2">
-                                    {{ form.username.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
+<!-- TailwindCSS & Fonts -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
 
-                        <div class="mb-3">
-                            <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
-                            {{ form.password }}
-                            {% if form.password.errors %}
-                                <div class="alert alert-danger mt-2">
-                                    {{ form.password.errors }}
-                                </div>
-                            {% endif %}
-                        </div>
+<style>
+    input {
+        border-bottom: 2px solid black;
+        border-right: 2px solid black;
+    }
+</style>
 
-                        <button type="submit" class="btn btn-primary w-100">Login</button>
-                    </form>
-                    <p class="mt-3 text-center">
-                        Don't have an account? <a href="{% url 'register' %}">Register here</a>
-                    </p>
+<!-- Full-screen flex container -->
+<div class="min-h-screen bg-gray-200 flex items-center justify-center">
+    <!-- Card Container -->
+    <div class="w-full max-w-md bg-white shadow-lg rounded-lg overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gray-100 p-6">
+            <h2 class="text-4xl font-bold text-center" style="font-family: 'Orbitron', sans-serif;">
+                Crystal Login
+            </h2>
+        </div>
+
+        <!-- Form Section -->
+        <div class="p-8">
+            <form method="post" novalidate class="space-y-6">
+                {% csrf_token %}
+
+                <!-- Username -->
+                <div>
+                    <label for="{{ form.username.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Username
+                    </label>
+                    <input id="{{ form.username.id_for_label }}"
+                           name="{{ form.username.name }}"
+                           class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                           placeholder="Enter your username">
+                    {% if form.username.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {{ form.username.errors }}
+                        </div>
+                    {% endif %}
                 </div>
-            </div>
+
+                <!-- Password -->
+                <div>
+                    <label for="{{ form.password.id_for_label }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Password
+                    </label>
+                    <input id="{{ form.password.id_for_label }}"
+                           name="{{ form.password.name }}"
+                           type="password"
+                           class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-500"
+                           placeholder="Enter your password">
+                    {% if form.password.errors %}
+                        <div class="text-red-600 text-sm mt-1">
+                            {{ form.password.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full bg-gray-800 text-white py-3 rounded-lg font-bold hover:bg-black transition duration-300">
+                    Login
+                </button>
+            </form>
+
+            <!-- Register Link -->
+            <p class="text-center mt-6 text-gray-700">
+                Don't have an account?
+                <a href="{% url 'register' %}" class="text-blue-600 hover:underline">Register here</a>
+            </p>
         </div>
     </div>
 </div>

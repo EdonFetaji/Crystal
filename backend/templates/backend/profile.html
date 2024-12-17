@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container mx-auto p-6">
+        <!-- Profile Section -->
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center">
+                <!-- Profile Icon -->
+                <div class="w-16 h-16 flex items-center justify-center rounded-full border-2 border-gray-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-black" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 14a4 4 0 110-8 4 4 0 010 8zm0 6a8 8 0 110-16 8 8 0 010 16z"></path>
+                    </svg>
+                </div>
+                <!-- User Information -->
+                <div class="ml-4">
+                    <h2 class="text-xl font-semibold text-black">{{ user.username }}</h2>
+                    <p class="text-gray-700 font-semibold">{{ user.email }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Bar Section -->
+        <div class="ui-widget mb-6">
+            <form method="POST" action="{% url 'add_to_watchlist_from_profile' %}" class="relative w-full max-w-sm">
+                {% csrf_token %}
+                <!-- Search Input -->
+                <div class="flex items-center">
+                    <input id="tags" name="stock_code" placeholder="Search stock..."
+                           class="w-full border border-gray-300 rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                    <!-- Add Button -->
+                    <button type="submit"
+                            class="ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        Add
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Watchlist Table -->
+        {% if stocks %}
+            <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+                <table class="table-auto w-full border-collapse">
+                    <thead class="bg-gray-200 text-gray-700">
+                    <tr>
+                        <th class="px-4 py-2 text-left">Symbol</th>
+                        <th class="px-4 py-2 text-left">Last</th>
+                        <th class="px-4 py-2 text-left">Open</th>
+                        <th class="px-4 py-2 text-left">Hgh</th>
+                        <th class="px-4 py-2 text-left">Low</th>
+                        <th class="px-4 py-2 text-left">Time</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for stock in stocks %}
+                        <tr class="hover:bg-gray-100 border-b">
+                            <td class="px-4 py-2 font-semibold">{{ stock.code }}</td>
+                            <td class="px-4 py-2">{{ stock.last|default:"-" }}</td>
+                            <td class="px-4 py-2">{{ stock.open|default:"-" }}</td>
+                            <td class="px-4 py-2">{{ stock.high|default:"-" }}</td>
+                            <td class="px-4 py-2">{{ stock.low|default:"-" }}</td>
+                            <td class="px-4 py-2">{{ stock.time|default:"-" }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-gray-600">
+                Your watchlist is empty. Browse our
+                <a href="{% url 'stock_list' %}" class="text-blue-500 underline">stocks</a>
+                to add some!
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Custom CSS for Autocomplete Dropdown -->
+    <style>
+        /* Style the autocomplete container */
+        .ui-autocomplete {
+            background-color: white;
+            border: 1px solid #d1d5db; /* Gray border */
+            border-radius: 8px;
+            max-height: 200px;
+            width: 40px;
+            overflow-y: auto;
+            box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+        }
+
+        /* Style the individual list items */
+        .ui-menu-item {
+            padding: 8px 12px;
+            color: #333;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .ui-menu-item:hover {
+            background-color: darkgrey; /* Light gray background on hover */
+            cursor: pointer;
+        }
+
+        /* Remove border and rounded corners on focus */
+        .ui-autocomplete:focus {
+            outline: none;
+            border: none;
+        }
+    </style>
+
+    <!-- jQuery Libraries -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
+    <!-- jQuery UI Autocomplete Script -->
+    <script>
+        $(function () {
+            var stockCodes = [ {% for stock in all_stocks %} "{{ stock.code }}", {% endfor %} ];
+
+            $("#tags").autocomplete({
+                source: stockCodes,
+                minLength: 1,
+                appendTo: ".ui-widget" // Ensures dropdown renders properly
+            });
+        });
+    </script>
+
+{% endblock %}

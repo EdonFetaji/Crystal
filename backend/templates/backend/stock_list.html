@@ -1,45 +1,47 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="display-4">All Stocks</h1>
-        </div>
+<div class="container mx-auto px-4 py-8">
+    <!-- Header Section -->
+    <div class="mb-8 text-center">
+        <h1 class="text-4xl font-bold mb-4">All Stocks</h1>
     </div>
 
-    <div class="row">
-        <div class="col-12">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Code</th>
-                            <th>Name</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for stock in stocks %}
-                        <tr>
-                            <td>{{ stock.code }}</td>
-                            <td>{% if stock.name %}{{ stock.name }}{% else %}<span class="text-muted">No name available</span>{% endif %}</td>
-                            <td>
-                                <a href="{% url 'stock_detail' stock.code %}" class="btn btn-sm btn-primary">View Details</a>
-                                {% if user.is_authenticated %}
-                                    {% if stock in user.app_user.watchlist.all %}
-                                        <a href="{% url 'remove_from_watchlist' stock.code %}" class="btn btn-sm btn-outline-danger">Remove from Watchlist</a>
-                                    {% else %}
-                                        <a href="{% url 'add_to_watchlist' stock.code %}" class="btn btn-sm btn-outline-success">Add to Watchlist</a>
-                                    {% endif %}
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+    <!-- Table Section -->
+    <div class="overflow-x-auto shadow-lg rounded-lg">
+        <table class="min-w-full bg-white text-gray-800">
+            <thead class="bg-blue-600 text-white">
+                <tr>
+                    <th class="px-4 py-3 text-left">Code</th>
+                    <th class="px-4 py-3 text-left">Name</th>
+                    <th class="px-4 py-3 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for stock in stocks %}
+                <tr class="hover:bg-blue-50 transition-all duration-300 ease-in-out">
+                    <td class="px-4 py-3">{{ stock.code }}</td>
+                    <td class="px-4 py-3">
+                        {% if stock.name %}
+                            {{ stock.name }}
+                        {% else %}
+                            <span class="text-gray-400">No name available</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 space-x-2">
+                        <a href="{% url 'stock_detail' stock.code %}" class="bg-blue-500 text-white py-2 px-4 rounded-md text-sm hover:bg-blue-600 transition duration-300">View Details</a>
+                        {% if user.is_authenticated %}
+                            {% if stock in user.app_user.watchlist.all %}
+                                <a href="{% url 'remove_from_watchlist' stock.code %}" class="border border-red-500 text-red-500 py-2 px-4 rounded-md text-sm hover:bg-red-500 hover:text-white transition duration-300">Remove</a>
+                            {% else %}
+                                <a href="{% url 'add_to_watchlist' stock.code %}" class="border border-green-500 text-green-500 py-2 px-4 rounded-md text-sm hover:bg-green-500 hover:text-white transition duration-300">Add</a>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}
