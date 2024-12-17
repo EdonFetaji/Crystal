@@ -1,23 +1,37 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.contrib.admin.views.decorators import staff_member_required
-from django.core.management import call_command
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from .models import Stock
-import yfinance as yf
-import boto3
-from botocore.exceptions import ClientError
-from django.conf import settings
-import pandas as pd
 import io
 import json
+import os
+from ast import Index
+
+import boto3
+import pandas as pd
+from aiohttp.web_exceptions import HTTPResetContent
+from django.db.models.fields import return_None
+
+from .models import Stock
+from django.conf import settings
 from ta.trend import SMAIndicator
+import plotly.graph_objects as go
+from django.contrib import messages
+from django.http import JsonResponse, HttpResponse
 from ta.momentum import RSIIndicator
 from ta.volatility import BollingerBands
 from plotly.subplots import make_subplots
-import plotly.graph_objects as go
+from botocore.exceptions import ClientError
+from django.core.management import call_command
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.admin.views.decorators import staff_member_required
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Access environment variables
+access_key = os.getenv("WASABI_ACCESS_KEY")
+secret_key = os.getenv("WASABI_SECRET_KEY")
+bucket_name = os.getenv("WASABI_BUCKET_NAME")
 
 
 # Utility function to prepare stock data from CSV
@@ -95,12 +109,7 @@ def remove_from_watchlist(request, code):
     return redirect('stock_detail', code=code)
 
 
-access_key = 'A4NKUO1LSJ1BPPX8KF65'
-secret_key = 'mlGRIVvhK4hVlBmIZ7SlfYPqaFzjfpnUcwyD9YFW'
-bucket_name = 'mkdstocks'
-
-
-def get_stock_historical_data_view(code):
+def get_stock_csv_data(code):
     """
     Fetches stock historical data from a Wasabi S3 bucket and returns it as a Pandas DataFrame.
 
@@ -131,56 +140,26 @@ def get_stock_historical_data_view(code):
         return None
 
 
-# Technical analysis
-# @login_required
-# def technical_analysis(request, code):
-#     try:
-#         df = get_stock_historical_data_view(code)
-#         # data = json.loads(response.content)
-#         if df is None:
-#             return JsonResponse({'error': 'Stock data not found'}, status=404)
-#
-#         close_prices = df['Last trade price']
-#         sma_20 = SMAIndicator(close=close_prices, window=20).sma_indicator()
-#         sma_50 = SMAIndicator(close=close_prices, window=50).sma_indicator()
-#         rsi = RSIIndicator(close=close_prices).rsi()
-#         bollinger = BollingerBands(close=close_prices)
-#         upper_band, lower_band = bollinger.bollinger_hband(), bollinger.bollinger_lband()
-#
-#         fig = make_subplots(rows=2, cols=1)
-#         fig.add_trace(go.Scatter(x=df['Date'], y=close_prices, name="Price"))
-#         fig.add_trace(go.Scatter(x=df['Date'], y=sma_20, name="SMA 20"))
-#         fig.add_trace(go.Scatter(x=df['Date'], y=sma_50, name="SMA 50"))
-#
-#         return JsonResponse({
-#             'plot': fig.to_json(),
-#             'analysis': {
-#                 'trend': {'sma20': round(sma_20.iloc[-1], 2), 'sma50': round(sma_50.iloc[-1], 2)},
-#                 'momentum': {'rsi': round(rsi.iloc[-1], 2)},
-#                 'volatility': {'upper_band': round(upper_band.iloc[-1], 2),
-#                                'lower_band': round(lower_band.iloc[-1], 2)},
-#             }
-#         })
-#     except Exception as e:
-#         return JsonResponse({'error': str(e)}, status=500)
+def prepare_stock_data_analysis(df):
+    try:
+        numeric_columns = [
+            'Last trade price', 'Max', 'Min', 'Avg. Price',
+            '%chg.', 'Volume', 'Turnover in BEST in denars', 'Total turnover in denars'
+        ]
+        for col in numeric_columns:
+            if col in df.columns:
+                df[col] = df[col].astype(str).str.replace('.', '').str.replace(',', '.').astype(float)
 
-
-# Fundamental analysis
-# @login_required
-
-from django.http import JsonResponse
-import pandas as pd
-from ta.trend import SMAIndicator
-from ta.momentum import RSIIndicator
-from ta.volatility import BollingerBands
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
+        return df.sort_values('Date', ascending=False)  # Sort by date
+    except Exception as e:
+        return None
 
 
 def technical_analysis(request, code):
     try:
         # Fetch stock data
-        df = get_stock_historical_data_view(code)
+        df = get_stock_csv_data(code)
+        df = prepare_stock_data_analysis(df)
         if df is None:
             return JsonResponse({'error': 'Stock data not found'}, status=404)
 
@@ -274,7 +253,9 @@ def fundamental_analysis(request, code):
         }
 
     # Perform Fundamental Analysis
-    df = get_stock_historical_data_view(code)
+    df = get_stock_csv_data(code)
+    df = prepare_stock_data_analysis(df)
+    df['Last trade price'] = df['Last trade price'].fillna(method='ffill').fillna(method='bfill')
     df = calculate_price_trends(df)
     turnover_trends = calculate_turnover_trends(df)
     volume_trends = volume_analysis(df)

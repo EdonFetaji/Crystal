@@ -1,8 +1,17 @@
+import requests
+from bs4 import BeautifulSoup
 from django.core.management.base import BaseCommand
 from backend.models import Stock
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+import os
+import django
+
+
+# Set up Django settings
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Crystal.settings')  # Replace 'Crystal' with your project name
+django.setup()
 
 
 def scrape_data():
@@ -19,8 +28,8 @@ def scrape_data():
         elements = driver.find_elements(By.CSS_SELECTOR, selector)
         for e in elements:
             row = {}
-            row['name'] = e.find_element(By.CSS_SELECTOR, '.sorting_1 > a').get_attribute('innerHTML', None)
-            row['mse_link'] = e.find_element(By.CSS_SELECTOR, '.sorting_1 > a').get_attribute('href', None)
+            row['name'] = e.find_element(By.CSS_SELECTOR, '.sorting_1 > a').get_attribute('innerHTML')
+            row['mse_link'] = e.find_element(By.CSS_SELECTOR, '.sorting_1 > a').get_attribute('href')
             data.append(row)
         return data
 
@@ -32,7 +41,7 @@ def scrape_data():
 
     for s in stock_info:
         try:
-            driver.get(s['mse_link'])
+            driver.get(str(s['mse_link']))
             code = driver.find_element(By.CSS_SELECTOR, '#symbols > li > a').get_attribute('innerHTML')
             s['code'] = code
         except Exception:
@@ -57,7 +66,7 @@ def get_stock_names():
     codes = map(lambda x: x.text.strip(), soup.select("#Code option"))
     return [
         s for s in codes
-        if not (s.startswith('E') or any(char.isdigit() for char in s))
+        if not ((s.startswith('E') and any(char.isdigit() for char in s)) or any(char.isdigit() for char in s))
     ]
 
 
@@ -66,6 +75,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("Starting stock scraping and database population process...")
+        stocks_not_processed_from_hw1 = (
+            'EUMK', 'AMBR', 'ELMA', 'EUHA', 'INDI', 'ELNC', 'EVRO', 'ENER', 'ENSA', 'KKFI', 'INEK', 'EDST', 'JULI',
+            'TIGA')
 
         try:
             # Scrape stock data
@@ -74,10 +86,11 @@ class Command(BaseCommand):
             # Populate the database with the retrieved stock_info
             for stock in stock_info:
                 try:
-                    code = stock.get('code')
-                    name = stock.get('name', '')  # Default to empty string if no name
-                    mse_link = stock.get('mse_link', '')  # Default to empty string if no link
+                    code = stock.get('code',None)
+                    name = stock.get('name', 'N/A')
+                    mse_link = stock.get('mse_link', 'N/A')
                     cloud_key = f"Stock_Data/{code}.csv" if code else None
+                    last_modified = '2014-01-01' if code in stocks_not_processed_from_hw1 else "2024-11-8"
 
                     if not code:
                         self.stdout.write(self.style.WARNING(f"Skipping entry without code: {stock}"))
@@ -89,6 +102,7 @@ class Command(BaseCommand):
                             'name': name,
                             'mse_url': mse_link,
                             'cloud_key': cloud_key,
+                            'last_modified': last_modified,
                         }
                     )
 

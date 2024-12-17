@@ -7,10 +7,10 @@ from django.dispatch import receiver
 
 class Stock(models.Model):
     code = models.CharField(max_length=10, unique=True)
-    name = models.CharField(max_length=100)
-    mse_url = models.URLField(max_length=500)
-    cloud_key = models.CharField(max_length=255)
-    last_modified = models.DateTimeField(auto_now=True)
+    name = models.CharField(max_length=100,null=True, blank=True)
+    mse_url = models.URLField(max_length=500,null=True, blank=True)
+    cloud_key = models.CharField(max_length=255,)
+    last_modified = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
