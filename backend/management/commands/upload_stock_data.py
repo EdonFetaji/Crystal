@@ -17,6 +17,9 @@ from datetime import datetime, timedelta
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Access environment variables
 access_key = os.getenv("WASABI_ACCESS_KEY")
@@ -157,7 +160,8 @@ async def process_data(stock, stock_df: pd.DataFrame):
 
 
 async def run_process_data(stock, combined_df):
-    await process_data(stock, combined_df)
+    if combined_df is not None:
+        await process_data(stock, combined_df)
 
 
 async def get_one_year_stock_data(session, stockname, from_date, until_date):
@@ -194,12 +198,11 @@ async def get_one_year_stock_data(session, stockname, from_date, until_date):
 
 
 async def get_all_data_for_one_stock(session, stock, last_date):
-    modified_stock = {'Code': stock}
     data_array = []
 
     from_date = datetime.now().date()
     if from_date == last_date:
-        print(f"Data for {stock['Code']} is up to date.")
+        print(f"Data for {stock} is up to date.")
         return None
 
     until_date = from_date
@@ -216,15 +219,18 @@ async def get_all_data_for_one_stock(session, stock, last_date):
     data_array = list(filter(lambda x: x is not None, data_array))
     if len(data_array) == 0:
         print(f"No data found for {stock} in {last_date.year}.")
-        modified_stock['last_modified'] = last_date
-        return modified_stock
+        return {'Code': stock, 'last_modified': last_date, 'price': None, 'change': None}
     # TODO
 
     combined_df = pd.concat(data_array, ignore_index=True)  # Combine all DataFrames
     asyncio.create_task(run_process_data(stock, combined_df))
 
-    modified_stock['last_modified'] = datetime.now()
-    return modified_stock
+    #  float(str(combined_df.iloc[0, 1]).replace('.', '').replace(',', '.'))
+
+    price = combined_df.iloc[0, 1]
+    change = combined_df.iloc[0, 5]
+
+    return {'Code': stock, 'last_modified': datetime.now().date(), 'price': price, 'change': change}
 
 
 async def get_all_stocks_data(stocks):
@@ -291,6 +297,27 @@ def fetch_existing_stocks():
     return {stock.code: stock for stock in Stock.objects.all()}
 
 
+def clean_value(val):
+    if isinstance(val, str):
+        return float(val)
+    if str(val) == "nan":
+        return 0
+
+    return val
+
+
+@sync_to_async
+def update_stock_data(stock_data):
+    Stock.objects.update_or_create(
+        code=stock_data['Code'],  # Lookup field
+        defaults={
+            'last_modified': stock_data.get('last_modified'),
+            'price': clean_value(stock_data.get('price')),
+            'change': clean_value(stock_data.get('change'))
+        }
+    )
+
+
 async def main():
     initialize_s3_client_pool()
     # stocks = await get_stock_names()
@@ -315,12 +342,8 @@ async def main():
     stock_objects = await get_all_stocks_data(stocks)
 
     for s in stock_objects:
-        Stock.objects.update_or_create(
-            code=s['Code'],  # Lookup field
-            defaults={
-                'last_modified': s.get('last_modified'),
-            }
-        )
+        if s and s.get('Code'):
+            await  update_stock_data(s)
 
 
 if __name__ == "__main__":

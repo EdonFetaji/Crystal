@@ -10,71 +10,38 @@
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-<!-- Navigation Bar -->
-{#<nav class="bg-gray-800 text-white">#}
-{#    <div class="container mx-auto flex justify-between items-center p-4">#}
-{#        <!-- Logo -->#}
-{#        <a href="{% url 'home' %}" class="text-2xl font-bold" style="font-family: 'Orbitron', sans-serif;">Crystal</a>#}
-{##}
-{#        <!-- Links -->#}
-{#        <ul class="flex space-x-6">#}
-{#            <li><a href="{% url 'home' %}" class="hover:text-gray-300">Home</a></li>#}
-{#            <li><a href="{% url 'stock_list' %}" class="hover:text-gray-300">Stocks</a></li>#}
-{#            {% if user.is_authenticated %}#}
-{#                <li><a href="{% url 'watchlist' %}" class="hover:text-gray-300">My Watchlist</a></li>#}
-{#            {% endif %}#}
-{#        </ul>#}
-{##}
-{#        <!-- User Info -->#}
-{#        <div class="space-x-4">#}
-{#            {% if user.is_authenticated %}#}
-{#                <span class="text-gray-400">Welcome, {{ user.email }}</span>#}
-{#                <a href="{% url 'logout' %}" class="hover:text-gray-300">Logout</a>#}
-{#            {% else %}#}
-{#                <a href="{% url 'login' %}" class="hover:text-gray-300">Login</a>#}
-{#                <a href="{% url 'register' %}" class="hover:text-gray-300">Register</a>#}
-{#            {% endif %}#}
-{#        </div>#}
-{#    </div>#}
-{#</nav>#}
+<aside class="fixed top-0 left-0 h-full w-64 bg-gray-800 text-white flex flex-col">
+    <div class="p-6 text-2xl font-bold" style="font-family: 'Orbitron', sans-serif;">
+        <a href="{% url 'home' %}">Crystal</a>
+    </div>
+    <nav class="flex-1 px-4 overflow-y-auto">
+        <ul>
+            <li class="mb-4"><a href="{% url 'home' %}" class="hover:text-gray-300">Home</a></li>
+            <li class="mb-4"><a href="{% url 'stock_list' %}" class="hover:text-gray-300">Stocks</a></li>
+            <li class="mb-4"><a href="{% url 'profile' %}" class="hover:text-gray-300">Profile</a></li>
+        </ul>
+    </nav>
+    <div class="p-4 border-t border-gray-700">
+        {% if user.is_authenticated %}
+            <span class="block mb-2 text-gray-400">Welcome, {{ user.email }}</span>
+            <a href="{% url 'logout' %}" class="hover:text-gray-300">Logout</a>
+        {% else %}
+            <a href="{% url 'login' %}" class="block hover:text-gray-300 mb-2">Login</a>
+            <a href="{% url 'register' %}" class="block hover:text-gray-300">Register</a>
+        {% endif %}
+    </div>
+</aside>
 
-<!-- Sidebar and Content -->
-<div class="flex h-screen">
-    <!-- Sidebar -->
-    <aside class="w-64 bg-gray-800 text-white flex flex-col">
-        <div class="p-6 text-2xl font-bold" style="font-family: 'Orbitron', sans-serif;">
-            <a href="{% url 'home' %}">Crystal</a>
-        </div>
-        <nav class="flex-1 px-4">
-            <ul>
-                <li class="mb-4"><a href="{% url 'home' %}" class="hover:text-gray-300">Home</a></li>
-                <li class="mb-4"><a href="{% url 'stock_list' %}" class="hover:text-gray-300">Stocks</a></li>
-                <li class="mb-4"><a href="{% url 'profile' %}" class="hover:text-gray-300">Profile</a></li>
-{#                {% if user.is_authenticated %}#}
-{#                <li class="mb-4"><a href="{% url 'watchlist' %}" class="hover:text-gray-300">My Watchlist</a></li>#}
-{#                {% endif %}#}
-            </ul>
-        </nav>
-        <div class="p-4 border-t border-gray-700">
-            {% if user.is_authenticated %}
-                <span class="block mb-2 text-gray-400">Welcome, {{ user.email }}</span>
-                <a href="{% url 'logout' %}" class="hover:text-gray-300">Logout</a>
-            {% else %}
-                <a href="{% url 'login' %}" class="block hover:text-gray-300 mb-2">Login</a>
-                <a href="{% url 'register' %}" class="block hover:text-gray-300">Register</a>
-            {% endif %}
-        </div>
-    </aside>
 
     <!-- Main Content -->
-    <main class="flex-1">
+    <main class="ml-64 flex-1 p-10">
         <!-- Messages -->
         {% if messages %}
             <div class="mb-4">
                 {% for message in messages %}
-                    <div class="p-4 mb-2 rounded-md 
-                        {% if message.tags == 'success' %} bg-green-100 text-green-700 
-                        {% elif message.tags == 'error' %} bg-red-100 text-red-700 
+                    <div class="p-4 mb-2 rounded-md
+                        {% if message.tags == 'success' %} bg-green-100 text-green-700
+                        {% elif message.tags == 'error' %} bg-red-100 text-red-700
                         {% else %} bg-gray-100 text-gray-700 {% endif %}">
                         {{ message }}
                     </div>
