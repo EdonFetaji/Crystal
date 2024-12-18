@@ -2,11 +2,14 @@ import io
 import json
 import os
 from ast import Index
-
 import boto3
 import pandas as pd
 from aiohttp.web_exceptions import HTTPResetContent
 from django.db.models.fields import return_None
+
+from concurrent.futures import ThreadPoolExecutor
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 
 from .models import Stock
 from django.conf import settings
@@ -39,6 +42,7 @@ from ta.trend import SMAIndicator
 from ta.trend import WMAIndicator
 from ta.volume import OnBalanceVolumeIndicator
 from ta.volatility import BollingerBands
+
 
 load_dotenv()
 
@@ -94,11 +98,6 @@ def watchlist(request):
 #     all_stocks = Stock.objects.all()
 #     stocks_watchlist = request.user.app_user.watchlist.all().order_by('code')
 #     return render(request, 'backend/profile.html', {'stocks': stocks_watchlist, 'all_stocks': all_stocks}, )
-
-
-from concurrent.futures import ThreadPoolExecutor
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
 
 
 @login_required
@@ -334,8 +333,22 @@ def prepare_stock_data_analysis(df):
 
 # TABLE VIEW FUNCTION
 
+import numpy as np
+
+
+def weighted_moving_average_alternative(prices, window):
+    weights = np.arange(1, window + 1)
+    wma = np.zeros(len(prices) - window + 1)
+
+    for i in range(window - 1, len(prices)):
+        weighted_sum = np.sum(prices[i - (window - 1):i + 1] * weights)
+        wma[i - (window - 1)] = weighted_sum / weights.sum()
+
+    return wma
+
 
 def technical_analysis(request, code):
+
     try:
         # Fetch and prepare stock data
         df = get_stock_csv_data(code)
@@ -357,9 +370,9 @@ def technical_analysis(request, code):
         for range_label, data in ranges.items():
             if data.empty:
                 response[range_label] = {metric: 'N/A' for metric in [
-                    'rsi', 'Stochastic Oscillator', 'MACD', 'CCI', 'Chaikin Oscillator',
-                    'EMA', 'SMA', 'WMA', 'OBV', 'Bollinger upper band',
-                    'Bollinger lower band', 'Bollinger middle'
+                    'rsi', 'Stochastic_Oscillator', 'MACD', 'CCI', 'Chaikin_Oscillator',
+                    'EMA', 'SMA', 'WMA', 'OBV', 'Bollinger_upper_band',
+                    'Bollinger_lower_band', 'Bollinger_middle_band'
                 ]}
                 continue
 
@@ -373,20 +386,28 @@ def technical_analysis(request, code):
             window_size = {'1d': 1, '1w': 7, '1m': 30}[range_label]
             indicators = {
                 'rsi': RSIIndicator(close=close_prices, window=window_size).rsi(),
-                'Stochastic_Oscillator': StochasticOscillator(close=close_prices, high=high_prices, low=low_prices, window=window_size).stoch(),
+                'Stochastic_Oscillator': StochasticOscillator(close=close_prices, high=high_prices, low=low_prices,
+                                                              window=window_size).stoch(),
                 'MACD': MACD(close=close_prices, window_slow=26, window_fast=12, window_sign=9).macd(),
                 'CCI': CCIIndicator(high=high_prices, low=low_prices, close=close_prices, window=window_size).cci(),
-                'Chaikin Oscillator': ChaikinMoneyFlowIndicator(close=close_prices, high=high_prices, low=low_prices, volume=volume_data, window=window_size).chaikin_money_flow(),
+                'Chaikin_Oscillator': ChaikinMoneyFlowIndicator(close=close_prices, high=high_prices, low=low_prices,
+                                                                volume=volume_data,
+                                                                window=window_size).chaikin_money_flow(),
                 'EMA': EMAIndicator(close=close_prices, window=window_size).ema_indicator(),
                 'SMA': SMAIndicator(close=close_prices, window=window_size).sma_indicator(),
                 'OBV': OnBalanceVolumeIndicator(close=close_prices, volume=volume_data).on_balance_volume(),
-                'Bollinger_upper_band': BollingerBands(close=close_prices, window=window_size, window_dev=2).bollinger_hband(),
-                'Bollinger_lower_band': BollingerBands(close=close_prices, window=window_size, window_dev=2).bollinger_lband(),
-                'Bollinger_middle': BollingerBands(close=close_prices, window=window_size, window_dev=2).bollinger_mavg(),
+                'Bollinger_upper_band': BollingerBands(close=close_prices, window=window_size,
+                                                       window_dev=2).bollinger_hband(),
+                'Bollinger_lower_band': BollingerBands(close=close_prices, window=window_size,
+                                                       window_dev=2).bollinger_lband(),
+                'Bollinger_middle_band': BollingerBands(close=close_prices, window=window_size,
+                                                        window_dev=2).bollinger_mavg(),
+                # 'WMA': weighted_moving_average_alternative(close_prices, window=window_size)
             }
 
             # Add non-NaN results to the response
-            response[range_label] = {key: value.dropna().tolist() if not value.dropna().empty else 'N/A' for key, value in indicators.items()}
+            response[range_label] = {key: value.dropna().tolist() if not value.dropna().empty else 'N/A' for key, value
+                                     in indicators.items()}
 
         # Return response as JSON
         print(response)
