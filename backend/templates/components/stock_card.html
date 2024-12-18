@@ -1,4 +1,4 @@
-<div class=" flex flex-col align-center bg-white shadow-md rounded-lg overflow-hidden  p-6 group">
+<div class=" flex flex-col align-center bg-gray-200 shadow-md rounded-lg overflow-hidden  p-6 group">
     <div class="flex justify-between items-center">
         <h6 class="text-gray-600 mb-4">
             {% if stock.name %}
@@ -9,6 +9,7 @@
         </h6>
         {% if user.is_authenticated %}
             <form method="post" action="
+
                     {% if stock in user.app_user.watchlist.all %}{% url 'remove_from_watchlist' stock.code %}{% else %}{% url 'add_to_watchlist' stock.code %}{% endif %}">
                 {% csrf_token %}
                 <!-- Watchlist Button with Hidden Input -->
@@ -24,19 +25,17 @@
         {% endif %}
     </div>
 
-        <h5 class="text-2xl font-bold flex-1">{{ stock.code }}</h5>
+    <h5 class="text-2xl font-bold flex-1"  style="font-family: 'Orbitron', sans-serif;">{{ stock.code }}</h5>
 
-    <div class="flex justify-between items-center" >
-{#    style="background-color:#1f2937 "#}
-        <span class="rounded-lg px-1 py-2 border-2 border-gray-300"  >
-            <span class=" font-semibold{% if stock.change > 0 %} text-red-500 {% elif stock.change == 0 %} text-green-500{% else %}text-green-500{% endif %} ">
-            {{ stock.change }}
-            </span>
-
+    <div class="flex justify-between items-center pt-3">
+        {#    style="background-color:#1f2937 "#}
+        <span class="text-left">
+{#            {% include 'components/price_change_display.html' with stock = stock %}#}
+            {% include 'components/price_change_display.html' with stock=stock %}
         </span>
 
         <a href="{% url 'stock_detail' stock.code %}" class="group-hover:scale-125 transform duration-300 ease-in-out">
-            <img width="38" height="38" src="https://img.icons8.com/laces/64/arrow.png" alt="arrow"/>
+            <img width="45" height="45" src="https://img.icons8.com/laces/64/arrow.png" alt="arrow"/>
         </a>
     </div>
 </div>

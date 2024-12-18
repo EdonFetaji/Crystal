@@ -1,0 +1,13 @@
+
+
+<span class="flex flex-col ">
+    <span class=" flex-1  font-semibold{% if stock.change < 0 %} text-red-700 {% elif stock.change == 0 %} text-blue-500{% else %} text-green-500 {% endif %} ">
+        {% if stock.change > 0 %} + {% endif %}
+        {{ stock.change }}%
+    </span>
+
+    <span class="  font-semibold{% if stock.change < 0 %} text-red-700 {% elif stock.change == 0 %} text-blue-500{% else %} text-green-500 {% endif %} ">
+            {{ stock.price }} MKD
+    </span>
+
+</span>

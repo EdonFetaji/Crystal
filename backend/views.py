@@ -39,7 +39,7 @@ bucket_name = os.getenv("WASABI_BUCKET_NAME")
 
 # Home view
 def home(request):
-    stocks = Stock.objects.all().order_by('code')[:10]
+    stocks = Stock.objects.all().order_by('-price')[:9]
     return render(request, 'backend/home.html', {'stocks': stocks})
 
 
@@ -47,7 +47,7 @@ def home(request):
 
 def stock_list(request):
     stocks = Stock.objects.all()
-    paginator = Paginator(stocks, 10)  # Show 10 stocks per page
+    paginator = Paginator(stocks, 9)  # Show 10 stocks per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     return render(request, 'backend/stock_list.html', {'page_obj': page_obj})

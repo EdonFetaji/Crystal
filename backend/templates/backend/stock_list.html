@@ -18,9 +18,11 @@
             </button>
         </form>
 
+
+
         <!-- Table Section -->
         <div class="overflow-x-auto shadow-lg rounded-lg">
-            <div class="min-w-full bg-white text-gray-800 border border-gray-200 grid grid-cols-3 gap-3">
+            <div class="min-w-full grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-3">
 
                 {% for stock in page_obj %}
                     {% include 'components/stock_card.html' with stock=stock %}
