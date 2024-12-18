@@ -47,7 +47,7 @@
                     <tr>
                         <th class="px-4 py-2 text-left">Symbol</th>
                         <th class="px-4 py-2 text-left">Last</th>
-                        <th class="px-4 py-2 text-left">Open</th>
+                        <th class="px-4 py-2 text-left">Change</th>
                         <th class="px-4 py-2 text-left">Hgh</th>
                         <th class="px-4 py-2 text-left">Low</th>
                         <th class="px-4 py-2 text-left">Time</th>
@@ -58,7 +58,7 @@
                         <tr class="hover:bg-gray-100 border-b">
                             <td class="px-4 py-2 font-semibold">{{ stock.code }}</td>
                             <td class="px-4 py-2">{{ stock.last|default:"-" }}</td>
-                            <td class="px-4 py-2">{{ stock.open|default:"-" }}</td>
+                            <td class="px-4 py-2">{{ stock.change|default:"-" }}{% if stock.change %}%{% endif %}</td>
                             <td class="px-4 py-2">{{ stock.high|default:"-" }}</td>
                             <td class="px-4 py-2">{{ stock.low|default:"-" }}</td>
                             <td class="px-4 py-2">{{ stock.time|default:"-" }}</td>

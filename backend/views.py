@@ -24,8 +24,21 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.admin.views.decorators import staff_member_required
-
 from dotenv import load_dotenv
+
+# tech analysis - Oscilators
+from ta.momentum import RSIIndicator
+from ta.momentum import StochasticOscillator
+from ta.trend import MACD
+from ta.trend import CCIIndicator
+from ta.volume import ChaikinMoneyFlowIndicator
+
+# tech analusis - Moving Averages
+from ta.trend import EMAIndicator
+from ta.trend import SMAIndicator
+from ta.trend import WMAIndicator
+from ta.volume import OnBalanceVolumeIndicator
+from ta.volatility import BollingerBands
 
 load_dotenv()
 
@@ -53,7 +66,6 @@ def stock_list(request):
     return render(request, 'backend/stock_list.html', {'page_obj': page_obj})
 
 
-
 # Stock detail view
 def stock_detail(request, code):
     stock = get_object_or_404(Stock, code=code)
@@ -77,11 +89,66 @@ def watchlist(request):
     return render(request, 'backend/watchlist.html', {'stocks': stocks})
 
 
-@login_required()
+# @login_required()
+# def profile(request):
+#     all_stocks = Stock.objects.all()
+#     stocks_watchlist = request.user.app_user.watchlist.all().order_by('code')
+#     return render(request, 'backend/profile.html', {'stocks': stocks_watchlist, 'all_stocks': all_stocks}, )
+
+
+from concurrent.futures import ThreadPoolExecutor
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+
+
+@login_required
 def profile(request):
     all_stocks = Stock.objects.all()
     stocks_watchlist = request.user.app_user.watchlist.all().order_by('code')
-    return render(request, 'backend/profile.html', {'stocks': stocks_watchlist, 'all_stocks': all_stocks}, )
+
+    def process_stock(stock):
+        df = get_stock_csv_data(stock.code)
+
+        if df is not None and not df.empty:
+            df = prepare_stock_data_analysis(df)
+
+            # Select the latest stock data (first row after sorting)
+            last = df['Last trade price'].iloc[0] if 'Last trade price' in df.columns else None
+            change = df['%chg.'].iloc[0] if '%chg.' in df.columns else None
+            high = df['Max'].iloc[0] if 'Max' in df.columns else None
+            low = df['Min'].iloc[0] if 'Min' in df.columns else None
+            time = df['Date'].iloc[0] if 'Date' in df.columns else None
+
+            return {
+                'code': stock.code,
+                'last': last,
+                'change': change,
+                'high': high,
+                'low': low,
+                'time': time
+            }
+        else:
+            return {
+                'code': stock.code,
+                'last': None,
+                'change': None,
+                'high': None,
+                'low': None,
+                'time': None
+            }
+
+    # Use ThreadPoolExecutor for parallel processing
+    with ThreadPoolExecutor() as executor:
+        stock_data = list(executor.map(process_stock, stocks_watchlist))
+
+    return render(
+        request,
+        'backend/profile.html',
+        {
+            'stocks': stock_data,
+            'all_stocks': all_stocks,
+        }
+    )
 
 
 @login_required
@@ -93,6 +160,7 @@ def add_to_watchlist_from_profile(request):
         if stock:
             request.user.app_user.watchlist.add(stock)
             messages.success(request, f"{stock.code} has been added to your watchlist.")
+
         else:
             messages.error(request, "Stock not found. Please check the symbol.")
 
@@ -104,7 +172,7 @@ def add_to_watchlist(request, code):
     stock = get_object_or_404(Stock, code=code)
     request.user.app_user.watchlist.add(stock)
     messages.success(request, f'{stock.code} added to your watchlist.')
-    return redirect('stock_detail', code=code)
+    return redirect('home')
 
 
 @login_required
@@ -116,15 +184,6 @@ def remove_from_watchlist(request, code):
 
 
 def get_stock_csv_data(code):
-    """
-    Fetches stock historical data from a Wasabi S3 bucket and returns it as a Pandas DataFrame.
-
-    Args:
-        code (str): Stock code used to fetch the corresponding CSV file.
-
-    Returns:
-        pd.DataFrame or None: DataFrame containing stock data if successful, None otherwise.
-    """
     cloud_key = f"Stock_Data/{code}.csv"
     s3 = boto3.client(
         's3',
@@ -137,7 +196,8 @@ def get_stock_csv_data(code):
         file_response = s3.get_object(Bucket=bucket_name, Key=cloud_key)
         file_content = file_response['Body'].read().decode('utf-8')
 
-        # Load the content into a Pandas DataFrame
+        # print(pd.read_csv(io.StringIO(file_content)))
+
         return pd.read_csv(io.StringIO(file_content))
 
     except ClientError as e:
@@ -156,58 +216,186 @@ def prepare_stock_data_analysis(df):
             if col in df.columns:
                 df[col] = df[col].astype(str).str.replace('.', '').str.replace(',', '.').astype(float)
 
-        return df.sort_values('Date', ascending=False)  # Sort by date
+        return df
     except Exception as e:
         return None
 
 
+# def technical_analysis(request, code):
+#     try:
+#         # Fetch stock data
+#         df = get_stock_csv_data(code)
+#         df = prepare_stock_data_analysis(df)
+#         if df is None:
+#             return JsonResponse({'error': 'Stock data not found'}, status=404)
+#
+#         # Validate required columns
+#         if 'Last trade price' not in df.columns or 'Date' not in df.columns:
+#             return JsonResponse({'error': 'Required columns not found in stock data'}, status=500)
+#
+#         # Handle missing data
+#         df['Last trade price'] = df['Last trade price'].fillna(method='ffill').fillna(method='bfill')
+#
+#         # Calculate technical indicators
+#         close_prices = df['Last trade price']
+#         sma_20 = SMAIndicator(close=close_prices, window=20).sma_indicator()
+#         sma_50 = SMAIndicator(close=close_prices, window=50).sma_indicator()
+#         rsi = RSIIndicator(close=close_prices).rsi()
+#         bollinger = BollingerBands(close=close_prices)
+#         upper_band = bollinger.bollinger_hband()
+#         lower_band = bollinger.bollinger_lband()
+#
+#         # Create Plotly figure
+#         fig = make_subplots(rows=2, cols=1)
+#         fig.add_trace(go.Scatter(x=df['Date'], y=close_prices, name="Price"))
+#         fig.add_trace(go.Scatter(x=df['Date'], y=sma_20, name="SMA 20"))
+#         fig.add_trace(go.Scatter(x=df['Date'], y=sma_50, name="SMA 50"))
+#
+#         # Return analysis and plot
+#         return JsonResponse({
+#             'plot': fig.to_json(),
+#             'analysis': {
+#                 'trend': {'sma20': round(sma_20.iloc[-1], 2), 'sma50': round(sma_50.iloc[-1], 2)},
+#                 'momentum': {'rsi': round(rsi.iloc[-1], 2)},
+#                 'volatility': {
+#                     'upper_band': round(upper_band.iloc[-1], 2),
+#                     'lower_band': round(lower_band.iloc[-1], 2),
+#                 },
+#             },
+#         })
+#
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return JsonResponse({'error': str(e)}, status=500)
+
+
+# PLOTS FUNCTION
+# def technical_analysis(request, code):
+#     try:
+#         df = get_stock_csv_data(code)
+#         if df is None or df.empty:
+#             return JsonResponse({'error': 'Stock data not found'}, status=404)
+#
+#         # Prepare data for analysis
+#         df = prepare_stock_data_analysis(df)
+#         if df is None or 'Last trade price' not in df.columns or 'Date' not in df.columns:
+#             return JsonResponse({'error': 'Required columns not found in stock data'}, status=500)
+#
+#         # Handle missing data
+#         df['Last trade price'] = df['Last trade price'].ffill().bfill()
+#
+#         df.sort_values('Date', inplace=True)
+#         df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, format='%d.%m.%Y', errors='coerce')
+#
+#         # Calculate technical indicators
+#         close_prices = df['Last trade price']
+#         sma_20 = SMAIndicator(close=close_prices, window=20).sma_indicator()
+#         sma_50 = SMAIndicator(close=close_prices, window=50).sma_indicator()
+#         rsi = RSIIndicator(close=close_prices).rsi()
+#         bollinger = BollingerBands(close=close_prices)
+#         upper_band = bollinger.bollinger_hband()
+#         lower_band = bollinger.bollinger_lband()
+#
+#         # Create Plotly figure
+#         fig = make_subplots(rows=2, cols=1, subplot_titles=("Stock Prices with SMA", "RSI and Bollinger Bands"))
+#         # Plot stock prices and moving averages
+#         fig.add_trace(go.Scatter(x=df['Date'], y=close_prices, name="Price"), row=1, col=1)
+#         fig.add_trace(go.Scatter(x=df['Date'], y=sma_20, name="SMA 20"), row=1, col=1)
+#         fig.add_trace(go.Scatter(x=df['Date'], y=sma_50, name="SMA 50"), row=1, col=1)
+#
+#         # Plot RSI
+#         fig.add_trace(go.Scatter(x=df['Date'], y=rsi, name="RSI"), row=2, col=1)
+#
+#         # Plot Bollinger Bands
+#         fig.add_trace(go.Scatter(x=df['Date'], y=upper_band, name="Upper Band", line=dict(dash='dash')), row=1, col=1)
+#         fig.add_trace(go.Scatter(x=df['Date'], y=lower_band, name="Lower Band", line=dict(dash='dash')), row=1, col=1)
+#
+#         # Update layout
+#         fig.update_layout(height=800, width=1200, title_text=f"Technical Analysis for {code}")
+#
+#         # Return analysis and plot
+#         return JsonResponse({
+#             'plot': fig.to_json(),
+#             'analysis': {
+#                 'trend': {'sma20': round(sma_20.iloc[-1], 2), 'sma50': round(sma_50.iloc[-1], 2)},
+#                 'momentum': {'rsi': round(rsi.iloc[-1], 2)},
+#                 'volatility': {
+#                     'upper_band': round(upper_band.iloc[-1], 2),
+#                     'lower_band': round(lower_band.iloc[-1], 2),
+#                 },
+#             },
+#         })
+#
+#     except Exception as e:
+#         import traceback
+#         traceback.print_exc()
+#         return JsonResponse({'error': str(e)}, status=500)
+
+# TABLE VIEW FUNCTION
+
+
 def technical_analysis(request, code):
     try:
-        # Fetch stock data
+        # Fetch and prepare stock data
         df = get_stock_csv_data(code)
+        if df is None or df.empty:
+            return JsonResponse({'error': f"No data found for stock: {code}"}, status=404)
+
         df = prepare_stock_data_analysis(df)
-        if df is None:
-            return JsonResponse({'error': 'Stock data not found'}, status=404)
+        df['Last trade price'] = df['Last trade price'].ffill().bfill()
 
-        # Validate required columns
-        if 'Last trade price' not in df.columns or 'Date' not in df.columns:
-            return JsonResponse({'error': 'Required columns not found in stock data'}, status=500)
+        # Define ranges
+        ranges = {
+            '1d': df.iloc[:1],
+            '1w': df.iloc[:7],
+            '1m': df.iloc[:30]
+        }
 
-        # Handle missing data
-        df['Last trade price'] = df['Last trade price'].fillna(method='ffill').fillna(method='bfill')
+        response = {}
 
-        # Calculate technical indicators
-        close_prices = df['Last trade price']
-        sma_20 = SMAIndicator(close=close_prices, window=20).sma_indicator()
-        sma_50 = SMAIndicator(close=close_prices, window=50).sma_indicator()
-        rsi = RSIIndicator(close=close_prices).rsi()
-        bollinger = BollingerBands(close=close_prices)
-        upper_band = bollinger.bollinger_hband()
-        lower_band = bollinger.bollinger_lband()
+        for range_label, data in ranges.items():
+            if data.empty:
+                response[range_label] = {metric: 'N/A' for metric in [
+                    'rsi', 'Stochastic Oscillator', 'MACD', 'CCI', 'Chaikin Oscillator',
+                    'EMA', 'SMA', 'WMA', 'OBV', 'Bollinger upper band',
+                    'Bollinger lower band', 'Bollinger middle'
+                ]}
+                continue
 
-        # Create Plotly figure
-        fig = make_subplots(rows=2, cols=1)
-        fig.add_trace(go.Scatter(x=df['Date'], y=close_prices, name="Price"))
-        fig.add_trace(go.Scatter(x=df['Date'], y=sma_20, name="SMA 20"))
-        fig.add_trace(go.Scatter(x=df['Date'], y=sma_50, name="SMA 50"))
+            # Prepare metrics
+            close_prices = data['Last trade price']
+            high_prices = data['Max']
+            low_prices = data['Min']
+            volume_data = data['Volume']
 
-        # Return analysis and plot
-        return JsonResponse({
-            'plot': fig.to_json(),
-            'analysis': {
-                'trend': {'sma20': round(sma_20.iloc[-1], 2), 'sma50': round(sma_50.iloc[-1], 2)},
-                'momentum': {'rsi': round(rsi.iloc[-1], 2)},
-                'volatility': {
-                    'upper_band': round(upper_band.iloc[-1], 2),
-                    'lower_band': round(lower_band.iloc[-1], 2),
-                },
-            },
-        })
+            # Calculate indicators
+            window_size = {'1d': 1, '1w': 7, '1m': 30}[range_label]
+            indicators = {
+                'rsi': RSIIndicator(close=close_prices, window=window_size).rsi(),
+                'Stochastic_Oscillator': StochasticOscillator(close=close_prices, high=high_prices, low=low_prices, window=window_size).stoch(),
+                'MACD': MACD(close=close_prices, window_slow=26, window_fast=12, window_sign=9).macd(),
+                'CCI': CCIIndicator(high=high_prices, low=low_prices, close=close_prices, window=window_size).cci(),
+                'Chaikin Oscillator': ChaikinMoneyFlowIndicator(close=close_prices, high=high_prices, low=low_prices, volume=volume_data, window=window_size).chaikin_money_flow(),
+                'EMA': EMAIndicator(close=close_prices, window=window_size).ema_indicator(),
+                'SMA': SMAIndicator(close=close_prices, window=window_size).sma_indicator(),
+                'OBV': OnBalanceVolumeIndicator(close=close_prices, volume=volume_data).on_balance_volume(),
+                'Bollinger_upper_band': BollingerBands(close=close_prices, window=window_size, window_dev=2).bollinger_hband(),
+                'Bollinger_lower_band': BollingerBands(close=close_prices, window=window_size, window_dev=2).bollinger_lband(),
+                'Bollinger_middle': BollingerBands(close=close_prices, window=window_size, window_dev=2).bollinger_mavg(),
+            }
+
+            # Add non-NaN results to the response
+            response[range_label] = {key: value.dropna().tolist() if not value.dropna().empty else 'N/A' for key, value in indicators.items()}
+
+        # Return response as JSON
+        print(response)
+        return JsonResponse({'analysis': response})
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': f"An error occurred: {str(e)}"}, status=500)
 
 
 def fundamental_analysis(request, code):
