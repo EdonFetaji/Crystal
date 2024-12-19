@@ -10,28 +10,32 @@
 
         <!-- Search Bar -->
         <form method="get" class="mb-6 flex justify-center">
-            <input type="text" name="q" placeholder="Search stocks..."
-                   class="border border-gray-300 px-4 py-2 rounded-md focus:outline-none w-1/2">
+            <input id="tags" name="stock_code" placeholder="Search stock..."
+                   class="w-[550px] border border-gray-300 rounded-lg py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
             <button type="submit"
-                    class="ml-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-300">
+                    class="ml-2 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                 Search
             </button>
+
+            <div class="flex justify-center items-center ml-[13px]">
+                <a href="{% url 'stock_list' %}" class="text-blue-500 hover:underline">
+                    Show all stocks!
+                </a>
+            </div>
+
+
         </form>
-
-
 
         <!-- Table Section -->
         <div class="overflow-x-auto shadow-lg rounded-lg">
             <div class="min-w-full grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1 gap-3">
-
                 {% for stock in page_obj %}
                     {% include 'components/stock_card.html' with stock=stock %}
                 {% empty %}
-                        <p class="px-6 py-4 text-center text-gray-500">
-                            No stocks found. Check back later!</p>
+                    <p class="px-6 py-4 text-center text-gray-500">
+                        No stocks found. Check back later!
+                    </p>
                 {% endfor %}
-
-
             </div>
         </div>
 
@@ -46,4 +50,46 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Custom CSS for Autocomplete Dropdown -->
+    <style>
+        /* Style the autocomplete container */
+        .ui-autocomplete {
+            background-color: white;
+            border: 1px solid #d1d5db; /* Gray border */
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+        }
+
+        /* Style the individual list items */
+        .ui-menu-item {
+            padding: 8px 12px;
+            color: #333;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .ui-menu-item:hover {
+            background-color: #f3f4f6; /* Light gray background on hover */
+            cursor: pointer;
+        }
+    </style>
+
+    <!-- jQuery Libraries -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
+    <script>
+        $(function () {
+            var stockCodes = [ {% for stock in all_stocks %} "{{ stock.code }}", {% endfor %} ];
+
+            $("#tags").autocomplete({
+                source: stockCodes,
+                minLength: 1
+            });
+        });
+    </script>
 {% endblock %}

@@ -17,7 +17,7 @@
     <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
         <div class="px-6 py-4 bg-gray-400">
             <h2 class="text-2xl font-extrabold text-blanchedalmond">MACD Analysis</h2>
-            <p class="text-gray-300 font-bold font-extrabold text-gray-800">Moving Average Convergence Divergence</p>
+            <p class="text-gray-300 font-bold font-bold text-gray-800">Moving Average Convergence Divergence</p>
         </div>
         <div class="p-6 bg-gray-300">
             <div id="macdChart" class="w-full h-[400px]"></div>
@@ -42,31 +42,60 @@
             <div class="px-6 py-4 bg-gray-700">
                 <h2 class="text-2xl font-bold text-white">Technical Indicators</h2>
             </div>
-            <div class="p-6 overflow-x-auto">
+            <div class="p-6 overflow-x-auto bg-gray-200">
+                <div class="text-black font-extrabold">OSCILLATORS</div> <br>
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead>
                         <tr>
                             <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Range</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RSI</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stochastic Oscillator</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EMA</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SMA</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RSI - Relative Strength Index</th>
                             <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bollinger Bands</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CCI</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chaikin Oscillator</th>
-{#                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WMA</th>#}
-
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CCI - Commodity Channel Index</th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Signal</th>
                         </tr>
                     </thead>
-                    <tbody id="analysis-table-body" class="bg-white divide-y divide-gray-200">
+                    <tbody id="oscilators" class="bg-white divide-y divide-gray-200">
                         <tr>
                             <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Loading data...</td>
                         </tr>
                     </tbody>
+
+                </table>
+
+                <br>
+
+                <div class="text-black font-extrabold">MOVING AVERAGES</div> <br>
+
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                         <tr>
+                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Range</th>
+                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SMA - Simple Moving Average</th>
+                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EMA - Exponential Moving Average</th>
+                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WMA - Weighted Moving Average</th>
+                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KAMA - Kaufman's Adaptive Moving Average</th>
+                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">VMA - Variable Moving Average</th>
+                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Signal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="moving_averages" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Loading data...</td>
+                        </tr>
+                    </tbody>
+
                 </table>
             </div>
         </div>
     </div>
+
+<div>
+    Price plot of {{ stock.code }}:
+    <div class="p-6 bg-gray-800">
+            <div id='priceplot' class="w-full h-[400px]"></div>
+        </div>
+</div>
+
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -75,10 +104,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const stockCode = document.getElementById('stock_code').textContent;
 
     const updateTable = (data) => {
-        const tbody = document.getElementById('analysis-table-body');
+        console.log({{ data.analysis }})
+
+        const tbody = document.getElementById('oscilators');
         tbody.innerHTML = '';
 
         for (const [range, metrics] of Object.entries(data.analysis)) {
+            const signal = metrics.signal || 'N/A';
+
             const row = `
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -87,15 +120,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         ${parseFloat(metrics.rsi).toFixed(2) || 'N/A'}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${parseFloat(metrics.Stochastic_Oscillator).toFixed(2) || 'N/A'}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${parseFloat(metrics.EMA).toFixed(2) || 'N/A'}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${parseFloat(metrics.SMA).toFixed(2) || 'N/A'}
-                    </td>
+                    {#<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#}
+                    {#    ${parseFloat(metrics.Stochastic_Oscillator).toFixed(2) || 'N/A'}#}
+                    {#</td>#}
                     <td class="px-6 py-4 text-sm text-gray-500">
                         <span class="block"><strong>Upper</strong>: ${parseFloat(metrics.Bollinger_upper_band).toFixed(2) || 'N/A'}</span>
                         <span class="block"><strong>Middle</strong>: ${parseFloat(metrics.Bollinger_middle_band).toFixed(2) || 'N/A'}</span>
@@ -105,20 +132,54 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${parseFloat(metrics.CCI).toFixed(2) || 'N/A'}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${parseFloat(metrics.Chaikin_Oscillator).toFixed(2) || 'N/A'}
+                        ${signal}
                     </td>
                     {#<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">#}
-                    {#    ${parseFloat(metrics.DEMA).toFixed(2) || 'N/A'}#}
+                    {#    ${parseFloat(metrics.Chaikin_Oscillator).toFixed(2) || 'N/A'}#}
                     {#</td>#}
-
                 </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
         }
+
+        const tbody2 = document.getElementById("moving_averages")
+        tbody2.innerHTML = ''
+
+        for (const [range, metrics] of Object.entries(data.analysis)) {
+            const signal = metrics.signal || 'N/A'; // Fetch the signal value
+
+            const row = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ${range.toUpperCase()}
+                    </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${parseFloat(metrics.SMA).toFixed(2) || 'N/A'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${parseFloat(metrics.EMA).toFixed(2) || 'N/A'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${parseFloat(metrics.WMA).toFixed(2) || 'N/A'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if range == '1d'%}
+                            Need More than one datapoint!
+                        {% endif %}
+                        ${parseFloat(metrics.KAMA).toFixed(2) || 'N/A'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${parseFloat(metrics.VMA).toFixed(2) || 'N/A'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${signal}
+                    </td>
+
+                    `
+            ;
+            tbody2.insertAdjacentHTML('beforeend', row);
+        }
+
     };
 
-    const createTimeLabels = (days) => {
-        return Array.from({length: days}, (_, i) => `Day ${i + 1}`);
-    };
 
     const updatePlots = (data) => {
 
@@ -146,9 +207,11 @@ document.addEventListener('DOMContentLoaded', () => {
             margin: { t: 50, l: 50, r: 20, b: 50 }
         };
 
+
+
         const obvData = [
             {
-                x: createTimeLabels(1),
+                x: data['analysis']['1d']['date'],
                 y: data['analysis']['1d']['OBV'],
                 type: 'scatter',
                 mode: 'lines+markers',
@@ -156,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 line: { color: '#60A5FA' }
             },
             {
-                x: createTimeLabels(7),
+                x: data['analysis']['1w']['date'],
                 y: data['analysis']['1w']['OBV'],
                 type: 'scatter',
                 mode: 'lines+markers',
@@ -164,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 line: { color: '#2563EB' }
             },
             {
-                x: createTimeLabels(30),
+                x: data['analysis']['1m']['date'],
                 y: data['analysis']['1m']['OBV'],
                 type: 'scatter',
                 mode: 'lines+markers',
@@ -199,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const macdData = [
             {
-                x: createTimeLabels(1),
+                x: data['analysis']['1d']['date'],
                 y: data['analysis']['1d']['MACD'],
                 type: 'scatter',
                 mode: 'lines+markers',
@@ -207,7 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 line: { color: '#60A5FA' }
             },
             {
-                x: createTimeLabels(7),
+                x: data['analysis']['1w']['date'],
                 y: data['analysis']['1w']['MACD'],
                 type: 'scatter',
                 mode: 'lines+markers',
@@ -215,10 +278,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 line: { color: '#2563EB' }
             },
             {
-                x: createTimeLabels(30),
+                x: data['analysis']['1m']['date'],
                 y: data['analysis']['1m']['MACD'],
                 type: 'scatter',
-                mode: 'lines+markers',
+                mode: 'lines',
                 name: '1 Month',
                 line: { color: '#1E40AF' }
             }
@@ -226,22 +289,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+        const priceLayout = {
+            title: {
+                text: 'PRICE Trend',
+                font: { size: 24, color: '#1F2937' }
+            },
+            xaxis: {
+                title: 'Time Period',
+                gridcolor: '#E5E7EB'
+            },
+            yaxis: {
+                title: 'PRICE Value in DEN',
+                gridcolor: '#E5E7EB'
+            },
+            paper_bgcolor: 'white',
+            plot_bgcolor: 'white',
+            showlegend: true,
+            legend: {
+                x: 0,
+                y: 1.1,
+                orientation: 'h'
+            },
+            margin: { t: 50, l: 50, r: 20, b: 50 }
+        };
+
+        const x_ = data['historical_data'].map(item => item.Date);
+        const y_ = data['historical_data'].map(item => item['Last trade price']);
+
+
+        const priceData = [
+            {
+                x: [...x_].reverse(),
+                y: [...y_].reverse(),
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Price movement',
+                line: { color: '#60A5FA' }
+            }
+        ];
+
 
         Plotly.newPlot('macdChart', macdData, macdLayout, { responsive: true });
         Plotly.newPlot('obvChart', obvData, obvLayout, { responsive: true });
+        Plotly.newPlot('priceplot', priceData, priceLayout, { responsive: true });
     };
 
     const fetchAnalysis = (range) => {
         fetch(`/stocks/${stockCode}/technical-analysis/?range=${range}`)
             .then(response => response.json())
             .then(data => {
+                console.log(data)
                 updateTable(data);
                 updatePlots(data);
             })
-            .catch(error => {
-                console.error("Error fetching data:", error);
-                // Add error handling UI feedback here
-            });
     };
 
     // Set up event listeners for time range buttons
@@ -262,5 +362,10 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchAnalysis('1d');
 });
 </script>
+    <style>
+    th{
+        font-weight: bolder !important;
+    }
+    </style>
 {% endblock %}
 
