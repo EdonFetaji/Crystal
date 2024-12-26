@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const fetchAnalysis = (range) => {
-        fetch(`/stocks/${stockCode}/technical-analysis/?range=${range}`)
+        fetch(`/stocks/${stockCode}/technical-analysis/`)
             .then(response => response.json())
             .then(data => {
                 console.log(data)

@@ -1,13 +1,12 @@
 import io
 import json
+import logging
 import os
 from ast import Index
 import boto3
 import pandas as pd
 import numpy as np
 import ta.trend
-from aiohttp.web_exceptions import HTTPResetContent
-from django.db.models.fields import return_None
 
 from concurrent.futures import ThreadPoolExecutor
 from django.shortcuts import render
@@ -45,15 +44,10 @@ from ta.trend import WMAIndicator
 from ta.volume import OnBalanceVolumeIndicator
 from ta.volatility import BollingerBands
 
-load_dotenv()
 
-# Access environment variables
-access_key = os.getenv("WASABI_ACCESS_KEY")
-secret_key = os.getenv("WASABI_SECRET_KEY")
-bucket_name = os.getenv("WASABI_BUCKET_NAME")
+from utils.WassabiClient import get_wassabi_client, WasabiClient
 
-
-# Utility function to prepare stock data from CSV
+CloudClient: WasabiClient = get_wassabi_client()
 
 # Home view
 def home(request):
@@ -113,7 +107,8 @@ def profile(request):
     stocks_watchlist = request.user.app_user.watchlist.all().order_by('code')
 
     def process_stock(stock):
-        df = get_stock_csv_data(stock.code)
+
+        df = CloudClient.fetch_data(stock)
 
         if df is not None and not df.empty:
             df = prepare_stock_data_analysis(df)
@@ -189,29 +184,6 @@ def remove_from_watchlist(request, code):
     return redirect('stock_detail', code=code)
 
 
-def get_stock_csv_data(code):
-    cloud_key = f"Stock_Data/{code}.csv"
-    s3 = boto3.client(
-        's3',
-        endpoint_url='https://s3.eu-central-2.wasabisys.com',
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-    )
-    try:
-        # Attempt to fetch the file from the S3 bucket
-        file_response = s3.get_object(Bucket=bucket_name, Key=cloud_key)
-        file_content = file_response['Body'].read().decode('utf-8')
-
-        # print(pd.read_csv(io.StringIO(file_content)))
-
-        return pd.read_csv(io.StringIO(file_content))
-
-    except ClientError as e:
-        # Log the error (optional) and return None if an error occurs
-        print(f"Error fetching data: {e}")
-        return None
-
-
 def prepare_stock_data_analysis(df):
     try:
         numeric_columns = [
@@ -253,7 +225,9 @@ def kama(close_prices, window_size, sensitivity=2):
 
 def technical_analysis(request, code):
     try:
-        df = get_stock_csv_data(code)
+
+        df = CloudClient.fetch_data(code)
+        # df = get_stock_csv_data(code)
         if df is None or df.empty:
             return JsonResponse({'error': f"No data found for stock: {code}"}, status=404)
 
@@ -389,7 +363,7 @@ def fundamental_analysis(request, code):
         }
 
     # Perform Fundamental Analysis
-    df = get_stock_csv_data(code)
+    df = CloudClient.fetch_data(code)
     df = prepare_stock_data_analysis(df)
     df['Last trade price'] = df['Last trade price'].fillna(method='ffill').fillna(method='bfill')
     df = calculate_price_trends(df)
