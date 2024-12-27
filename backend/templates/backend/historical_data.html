@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="min-h-screen py-12">
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+        <h2 class="text-4xl font-bold text-gray-800 mb-6 text-center">
+            Historical Data for {{ stock.code }}
+        </h2>
+
+        <form method="GET" action="" class="mb-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label for="start_date" class="block text-sm font-semibold text-gray-700">From</label>
+                <input type="date" id="start_date" name="start_date"
+                       class="mt-2 block w-full h-10 rounded-lg border-gray-300 shadow-sm focus:ring-gray-500 focus:border-gray-500 text-sm">
+            </div>
+            <div>
+                <label for="end_date" class="block text-sm font-semibold text-gray-700">To</label>
+                <input type="date" id="end_date" name="end_date"
+                       class="mt-2 block w-full h-10 rounded-lg border-gray-300 shadow-sm focus:ring-gray-500 focus:border-gray-500 text-sm">
+            </div>
+            <div class="flex justify-end items-end">
+                <button type="submit"
+                        class="px-6 py-3 bg-gray-800 text-white font-semibold text-sm rounded-lg shadow hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800">
+                    Filter
+                </button>
+            </div>
+        </form>
+
+        <div class="overflow-x-auto bg-white rounded-lg shadow-lg">
+            <table id="historicalTable" class="min-w-full text-center divide-y divide-gray-200">
+                <thead class="bg-gray-100 border-black">
+                    <tr>
+                        <th class="px-6 py-3 text-xs font-bold text-gray-600 uppercase">Date</th>
+                        <th class="px-6 py-3 text-xs font-bold text-gray-600 uppercase">Last Trade Price</th>
+                        <th class="px-6 py-3 text-xs font-bold text-gray-600 uppercase">Max</th>
+                        <th class="px-6 py-3 text-xs font-bold text-gray-600 uppercase">Min</th>
+                        <th class="px-6 py-3 text-xs font-bold text-gray-600 uppercase">Avg. Price</th>
+                        <th class="px-6 py-3 text-xs font-bold text-gray-600 uppercase">Change %</th>
+                        <th class="px-6 py-3 text-xs font-bold text-gray-600 uppercase">Volume</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for row in historical_data %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ row.Date }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ row.Last_trade_price }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ row.Max }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ row.Min }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ row.Avg_price }}</td>
+                        <td class="px-6 py-4 text-sm {% if row.change < 0 %}text-red-500{% elif row.change > 0 %}text-green-500{% else %}text-gray-500{% endif %}">
+                            {{ row.change }}
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-700">{{ row.Volume }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-8 text-center">
+            <button id="backButton" class="px-6 py-3 bg-gray-800 text-white font-semibold text-sm rounded-lg shadow hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800">
+                Back
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const backButton = document.getElementById('backButton');
+        backButton.addEventListener('click', () => {
+            window.history.back();
+        });
+    });
+</script>
+{% endblock %}

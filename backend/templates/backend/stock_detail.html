@@ -1,18 +1,26 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-12 bg-gray-800">
+<div class="min-h-screen bg-gray-50 py-12 bg-gray-800 relative">
+  <a href="{% url 'historical_data' stock.code %}" class="absolute top-1 right-2" style="color: whitesmoke">See historical data!</a>
+{#    <a href="{% url 'stock_detail' stock.code %}" class="group-hover:scale-125 transform duration-300 ease-in-out"></a>#}
+
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header Section -->
         <div class="text-center mb-12">
+
             <h1 class="text-4xl font-extrabold text-gray-400 sm:text-5xl md:text-6xl">
                 Stock Analysis for:
                 <span id="stock_code" style="color: blanchedalmond">{{ stock.code }}</span>
             </h1>
+
             <p class="mt-4 text-xl text-gray-500">Comprehensive technical analysis and market insights</p>
         </div>
 
         <!-- Charts Section -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <div id="loading-overlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+            <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-black-500"></div>
+        </div>
     <!-- MACD Chart Card -->
     <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
         <div class="px-6 py-4 bg-gray-400">
@@ -101,6 +109,9 @@
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+
+
     const stockCode = document.getElementById('stock_code').textContent;
 
     const updateTable = (data) => {
@@ -334,14 +345,22 @@ document.addEventListener('DOMContentLoaded', () => {
         Plotly.newPlot('priceplot', priceData, priceLayout, { responsive: true });
     };
 
+    const stockCode_ = document.getElementById('stock_code').textContent;
+    const loadingOverlay = document.getElementById('loading-overlay');
+
     const fetchAnalysis = (range) => {
-        fetch(`/stocks/${stockCode}/technical-analysis/`)
+        loadingOverlay.classList.remove('hidden');  // Show loading
+        fetch(`/stocks/${stockCode_}/technical-analysis/`)
             .then(response => response.json())
             .then(data => {
-                console.log(data)
                 updateTable(data);
                 updatePlots(data);
+                loadingOverlay.classList.add('hidden');  // Hide loading
             })
+            .catch(error => {
+                console.error('Error:', error);
+                loadingOverlay.classList.add('hidden');  // Hide loading on error
+            });
     };
 
     // Set up event listeners for time range buttons

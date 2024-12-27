@@ -3,6 +3,8 @@ import json
 import logging
 import os
 from ast import Index
+from datetime import datetime, timedelta
+
 import boto3
 import pandas as pd
 import numpy as np
@@ -44,10 +46,10 @@ from ta.trend import WMAIndicator
 from ta.volume import OnBalanceVolumeIndicator
 from ta.volatility import BollingerBands
 
-
 from utils.WassabiClient import get_wassabi_client, WasabiClient
 
 CloudClient: WasabiClient = get_wassabi_client()
+
 
 # Home view
 def home(request):
@@ -76,6 +78,42 @@ def stock_detail(request, code):
     stock = get_object_or_404(Stock, code=code)
     return render(request, 'backend/stock_detail.html', {'stock': stock})
 
+
+def historical_data(request, code):
+    df = CloudClient.fetch_data(code)
+    if df is None or df.empty:
+        return JsonResponse({'error': f"No data found for stock: {code}"}, status=404)
+
+    df = prepare_stock_data_analysis(df)
+    df['Last trade price'] = df['Last trade price'].ffill().bfill()
+    df.rename(columns={
+        'Last trade price': 'Last_trade_price',
+        'Avg. Price': 'Avg_price',
+        '%chg.': 'change'
+    }, inplace=True)
+
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    if start_date and end_date:
+        df['Date'] = pd.to_datetime(df['Date'])
+        filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
+        filtered_df['Date'] = pd.to_datetime(filtered_df['Date']).dt.strftime('%d.%m.%Y')
+    else:
+        df['Date'] = pd.to_datetime(df['Date'])
+        current_date = datetime.now()
+        one_month_ago = current_date - timedelta(days=30)  # Adjust for exact one-month calculation if needed
+
+        # Filter the DataFrame
+        filtered_df = df[(df['Date'] >= one_month_ago) & (df['Date'] <= current_date)]
+        filtered_df['Date'] = pd.to_datetime(filtered_df['Date']).dt.strftime('%d.%m.%Y')
+
+    stock = get_object_or_404(Stock, code=code)
+
+    return render(request, 'backend/historical_data.html', {
+        'historical_data': filtered_df.to_dict('records'),
+        'stock': stock
+    })
 
 # Helper function for fetching analysis data
 def fetch_analysis_data(request, key, analysis_function):
@@ -259,16 +297,22 @@ def technical_analysis(request, code):
             window_size = {'1d': 1, '1w': 7, '1m': 30}[range_label]
             indicators = {
                 'rsi': RSIIndicator(close=close_prices, window=window_size).rsi(),
-                'Stochastic_Oscillator': StochasticOscillator(close=close_prices, high=high_prices, low=low_prices, window=window_size).stoch(),
+                'Stochastic_Oscillator': StochasticOscillator(close=close_prices, high=high_prices, low=low_prices,
+                                                              window=window_size).stoch(),
                 'MACD': MACD(close=close_prices, window_slow=26, window_fast=12, window_sign=9).macd(),
                 'CCI': CCIIndicator(high=high_prices, low=low_prices, close=close_prices, window=window_size).cci(),
-                'Chaikin_Oscillator': ChaikinMoneyFlowIndicator(close=close_prices, high=high_prices, low=low_prices, volume=volume_data, window=window_size).chaikin_money_flow(),
+                'Chaikin_Oscillator': ChaikinMoneyFlowIndicator(close=close_prices, high=high_prices, low=low_prices,
+                                                                volume=volume_data,
+                                                                window=window_size).chaikin_money_flow(),
                 'EMA': EMAIndicator(close=close_prices, window=window_size).ema_indicator(),
                 'SMA': SMAIndicator(close=close_prices, window=window_size).sma_indicator(),
                 'OBV': OnBalanceVolumeIndicator(close=close_prices, volume=volume_data).on_balance_volume(),
-                'Bollinger_upper_band': BollingerBands(close=close_prices, window=window_size, window_dev=2).bollinger_hband(),
-                'Bollinger_lower_band': BollingerBands(close=close_prices, window=window_size, window_dev=2).bollinger_lband(),
-                'Bollinger_middle_band': BollingerBands(close=close_prices, window=window_size, window_dev=2).bollinger_mavg(),
+                'Bollinger_upper_band': BollingerBands(close=close_prices, window=window_size,
+                                                       window_dev=2).bollinger_hband(),
+                'Bollinger_lower_band': BollingerBands(close=close_prices, window=window_size,
+                                                       window_dev=2).bollinger_lband(),
+                'Bollinger_middle_band': BollingerBands(close=close_prices, window=window_size,
+                                                        window_dev=2).bollinger_mavg(),
                 'WMA': ta.trend.wma_indicator(close_prices),
                 'KAMA': kama(close_prices, window_size + 1),
                 'VMA': (close_prices * volume_data).cumsum() / df['Volume'].cumsum(),
@@ -298,9 +342,7 @@ def technical_analysis(request, code):
             response[range_label]['signal'] = signal
             print(response)
 
-
         # print(df.to_dict(orient='records'))
-
 
         return JsonResponse({
             'analysis': response,

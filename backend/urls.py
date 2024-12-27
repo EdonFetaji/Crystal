@@ -7,13 +7,17 @@ from .views import (
     fundamental_analysis,
     watchlist,
     add_to_watchlist,
-    remove_from_watchlist, profile, add_to_watchlist_from_profile
+    remove_from_watchlist,
+    profile,
+    add_to_watchlist_from_profile,
+    historical_data
 )
 
 urlpatterns = [
     path('', home, name='home'),
     path('stocks/', stock_list, name='stock_list'),
     path('stocks/<str:code>/', stock_detail, name='stock_detail'),
+    path('stocks/historical_data/<str:code>/', historical_data, name='historical_data'),
     path('stocks/<str:code>/technical-analysis/', technical_analysis, name='technical_analysis'),
     path('stocks/<str:code>/fundamental-analysis/', fundamental_analysis, name='fundamental_analysis'),
     path('watchlist/', watchlist, name='watchlist'),
