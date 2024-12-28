@@ -17,9 +17,10 @@ from datetime import datetime, timedelta
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
 from django.conf import settings
-from dotenv import load_dotenv
-
-load_dotenv()
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Crystal.settings')
+import django
+django.setup()
+from backend.models import Stock
 
 # Access environment variables
 access_key = os.getenv("WASABI_ACCESS_KEY")
@@ -29,7 +30,6 @@ bucket_name = os.getenv("WASABI_BUCKET_NAME")
 MAX_WORKERS = 10
 s3_executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
 s3_client_pool = Queue(maxsize=MAX_WORKERS)
-
 
 def initialize_s3_client_pool():
     for _ in range(MAX_WORKERS):
@@ -41,28 +41,14 @@ def initialize_s3_client_pool():
         )
         s3_client_pool.put(s3_client)
 
-
 async def append_stock_data_to_cloud_async(code, new_df):
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(s3_executor, append_stock_data_to_cloud, code, new_df)
 
-
 def append_stock_data_to_cloud(code, new_df):
-    """
-    Appends a Pandas DataFrame to an existing CSV in a Wasabi S3 bucket or creates a new one if it doesn't exist.
-
-    Args:
-        code (str): Stock code used to identify the corresponding CSV file in the bucket.
-        new_df (pd.DataFrame): The new DataFrame to append in front of the existing data.
-
-    Returns:
-        bool: True if the operation was successful, False otherwise.
-    """
-
     s3 = s3_client_pool.get()  # Acquire an S3 client from the pool
     cloud_key = f"Stock_Data/{code}.csv"
     try:
-        # Try fetching the existing file from the cloud
         try:
             existing_file = s3.get_object(Bucket=bucket_name, Key=cloud_key)
             existing_df = pd.read_csv(StringIO(existing_file['Body'].read().decode('utf-8')))
@@ -70,23 +56,20 @@ def append_stock_data_to_cloud(code, new_df):
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
                 print(f"No existing data found for {code}. Creating a new file.")
-                existing_df = None  # No data if the file doesn't exist
+                existing_df = None
             else:
                 print(f"Error fetching existing data: {e}")
                 return False
 
-        # Combine the new data with the old data (new data in front)
         if existing_df is not None:
             combined_df = pd.concat([new_df, existing_df]).drop_duplicates()
         else:
             combined_df = new_df
 
-        # Convert the combined DataFrame to CSV format in memory
         csv_buffer = StringIO()
         combined_df.to_csv(csv_buffer, index=False)
-        csv_buffer.seek(0)  # Reset buffer to the start
+        csv_buffer.seek(0)
 
-        # Upload the CSV file back to Wasabi
         s3.put_object(
             Bucket=bucket_name,
             Key=cloud_key,
@@ -98,7 +81,6 @@ def append_stock_data_to_cloud(code, new_df):
         print(f"Error uploading data: {e}")
     finally:
         s3_client_pool.put(s3)
-
 
 async def process_data(stock, stock_df: pd.DataFrame):
     def is_valid_date_format(date_string):
@@ -143,7 +125,6 @@ async def process_data(stock, stock_df: pd.DataFrame):
         return "Invalid input format"
 
     def format_data(stock_df):
-
         if stock_df is not None:
             df = get_unformatted_data(stock_df)
             if "Date" in df.columns:
@@ -156,13 +137,8 @@ async def process_data(stock, stock_df: pd.DataFrame):
         else:
             return None
 
-    await append_stock_data_to_cloud_async(stock, format_data(stock_df))
-
-
-async def run_process_data(stock, combined_df):
-    if combined_df is not None:
-        await process_data(stock, combined_df)
-
+    formatted_data = format_data(stock_df)
+    await append_stock_data_to_cloud_async(stock, formatted_data)
 
 async def get_one_year_stock_data(session, stockname, from_date, until_date):
     data = {
@@ -180,22 +156,18 @@ async def get_one_year_stock_data(session, stockname, from_date, until_date):
                                 headers=headers) as response:
             if response.status == 200:
                 html_content = await response.text()
-
                 tables = pd.read_html(StringIO(html_content))
                 if tables:
                     print(f"Data for {stockname} in {from_date.year} collected.")
-
                     return tables[0]
                 else:
                     print(f"No tables found for {stockname} in {from_date.year}.")
 
             else:
-                print(
-                    f"HTTP RESPONSE ERROR: Failed to retrieve data for {stockname} in {from_date.year}, Status: {response.status}")
+                print(f"HTTP RESPONSE ERROR: Failed to retrieve data for {stockname} in {from_date.year}, Status: {response.status}")
 
     except Exception as e:
         print(f"Error fetching data for {stockname} in {from_date.year}: {e}")
-
 
 async def get_all_data_for_one_stock(session, stock, last_date):
     data_array = []
@@ -207,31 +179,28 @@ async def get_all_data_for_one_stock(session, stock, last_date):
 
     until_date = from_date
     while until_date > last_date:
-
         if until_date - last_date >= timedelta(days=365):
-            data_array.append(
-                await get_one_year_stock_data(session, stock, until_date - timedelta(days=365), until_date))
+            data = await get_one_year_stock_data(session, stock, until_date - timedelta(days=365), until_date)
+            if data is not None:
+                data_array.append(data)
             until_date -= timedelta(days=365)
         else:
-            data_array.append(await get_one_year_stock_data(session, stock, last_date, until_date))
+            data = await get_one_year_stock_data(session, stock, last_date, until_date)
+            if data is not None:
+                data_array.append(data)
             break
 
-    data_array = list(filter(lambda x: x is not None, data_array))
     if len(data_array) == 0:
         print(f"No data found for {stock} in {last_date.year}.")
         return {'Code': stock, 'last_modified': last_date, 'price': None, 'change': None}
-    # TODO
 
-    combined_df = pd.concat(data_array, ignore_index=True)  # Combine all DataFrames
-    asyncio.create_task(run_process_data(stock, combined_df))
-
-    #  float(str(combined_df.iloc[0, 1]).replace('.', '').replace(',', '.'))
+    combined_df = pd.concat(data_array, ignore_index=True)
+    await process_data(stock, combined_df)
 
     price = combined_df.iloc[0, 1]
     change = combined_df.iloc[0, 5]
 
     return {'Code': stock, 'last_modified': datetime.now().date(), 'price': price, 'change': change}
-
 
 async def get_all_stocks_data(stocks):
     connector = aiohttp.TCPConnector(limit_per_host=50, ttl_dns_cache=300)
@@ -239,7 +208,6 @@ async def get_all_stocks_data(stocks):
         tasks = [get_all_data_for_one_stock(session, stock['Code'], stock['Date']) for stock in stocks]
         results = await asyncio.gather(*tasks)
         return results
-
 
 async def get_stock_names():
     response = requests.get("https://www.mse.mk/en/stats/symbolhistory/ALK")
@@ -251,8 +219,6 @@ async def get_stock_names():
     ]
     stock_last_modified_dict = await get_last_modified_date_from_db()
 
-    # return check_last_date_available(stocks)
-    # Prepare the stock objects with last modified date
     stocks_objects = []
     for stock in stocks:
         last_date = stock_last_modified_dict.get(stock, datetime.now().date() - timedelta(days=3650))
@@ -262,54 +228,18 @@ async def get_stock_names():
     return stocks_objects
 
 
-from datetime import datetime
-import os
-import django
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Crystal.settings')
-django.setup()
-
-# Now you can import your models
-from backend.models import Stock
-
-
 @sync_to_async
 def get_last_modified_date_from_db():
-    """
-    Fetch the last modified date for each stock code from the Stock model in the database.
-    Returns:
-        dict: A dictionary with stock codes as keys and their last_modified date as values.
-    """
-    # Query all Stock objects and retrieve their code and last_modified fields
     stocks = Stock.objects.all().values('code', 'last_modified')
-
-    # Convert the query result to a dictionary {code: last_modified_date}
     stock_last_modified_dict = {
-        stock['code']: stock['last_modified']  # Convert datetime to date
-        for stock in stocks
+        stock['code']: stock['last_modified'] for stock in stocks
     }
-
     return stock_last_modified_dict
-
-
-@sync_to_async
-def fetch_existing_stocks():
-    return {stock.code: stock for stock in Stock.objects.all()}
-
-
-def clean_value(val):
-    if isinstance(val, str):
-        return float(val)
-    if str(val) == "nan":
-        return 0
-
-    return val
-
 
 @sync_to_async
 def update_stock_data(stock_data):
     Stock.objects.update_or_create(
-        code=stock_data['Code'],  # Lookup field
+        code=stock_data['Code'],
         defaults={
             'last_modified': stock_data.get('last_modified'),
             'price': clean_value(stock_data.get('price')),
@@ -317,36 +247,21 @@ def update_stock_data(stock_data):
         }
     )
 
+def clean_value(val):
+    if isinstance(val, str):
+        return float(val)
+    if str(val) == "nan":
+        return 0
+    return val
 
 async def main():
     initialize_s3_client_pool()
-    # stocks = await get_stock_names()
-    # stock_objects = await get_all_stocks_data(stocks)
-    #
-    # existing_stocks = await fetch_existing_stocks()
-    # new_stocks = []
-    # updates = []
-    #
-    # for s in stock_objects:
-    #     db_stock = existing_stocks.get(s['Code'])
-    #     if db_stock:
-    #         db_stock.last_modified = s['last_modified']
-    #         updates.append(db_stock)
-    #     else:
-    #         new_stocks.append(Stock(**s))
-    #
-    # Stock.objects.bulk_update(updates, ['last_modified'])
-    # Stock.objects.bulk_create(new_stocks)
-
     stocks = await get_stock_names()
     stock_objects = await get_all_stocks_data(stocks)
 
     for s in stock_objects:
         if s and s.get('Code'):
-            await  update_stock_data(s)
-
+            await update_stock_data(s)
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-    # _______________________________________________________________________

@@ -55,6 +55,29 @@ class WasabiClient:
             print(f"Error uploading data: {e}")
 
 
+    def create_articles(self, code: str, df: pd.DataFrame):
+        cloud_key = f"Articles/{code}.csv"
+
+        try:
+            csv_buffer = io.StringIO()
+            df.to_csv(csv_buffer, index=False)
+            csv_buffer.seek(0)
+            self.s3_client.put_object(Bucket=self.bucket, Key=cloud_key, Body=csv_buffer.getvalue())
+            print(f"Successfully appended and uploaded data for {code}.")
+        except ClientError as e:
+            print(f"Error uploading data: {e}")
+
+
+    def fetch_articles(self, code: str):
+        cloud_key = f"Articles/{code}.csv"
+        try:
+            file_response = self.s3_client.get_object(Bucket=self.bucket, Key=cloud_key)
+            file_content = file_response['Body'].read().decode('utf-8')  # Fix typo
+            return pd.read_csv(io.StringIO(file_content))
+        except ClientError as e:
+            print(f"Error fetching data: {e}")
+            return None
+
 def get_wassabi_client():
     global wassabi_client
     if wassabi_client is None:
@@ -67,5 +90,7 @@ def set_wassabi_client(client):
     global wassabi_client
     wassabi_client = client
 
+def initialize_wasabi_client():
+    return WasabiClient()
 
 wassabi_client = None
