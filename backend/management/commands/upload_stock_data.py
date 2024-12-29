@@ -16,6 +16,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from queue import Queue
 from concurrent.futures import ThreadPoolExecutor
+
+from celery import shared_task
 from django.conf import settings
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Crystal.settings')
 import django
@@ -263,5 +265,9 @@ async def main():
         if s and s.get('Code'):
             await update_stock_data(s)
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
+#     asyncio.run(main())
+
+@shared_task
+def run_stock_update():
     asyncio.run(main())

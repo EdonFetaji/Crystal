@@ -211,7 +211,8 @@ def add_to_watchlist(request, code):
     stock = get_object_or_404(Stock, code=code)
     request.user.app_user.watchlist.add(stock)
     messages.success(request, f'{stock.code} added to your watchlist.')
-    return redirect('home')
+    referrer = request.META.get('HTTP_REFERER', None)
+    return redirect(referrer)
 
 
 @login_required

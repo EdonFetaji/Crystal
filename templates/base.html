@@ -19,6 +19,9 @@
             <li class="mb-4"><a href="{% url 'home' %}" class="hover:text-gray-300">Home</a></li>
             <li class="mb-4"><a href="{% url 'stock_list' %}" class="hover:text-gray-300">Stocks</a></li>
             <li class="mb-4"><a href="{% url 'profile' %}" class="hover:text-gray-300">Profile</a></li>
+            {% if user.is_superuser  %}
+            <li class="mb-4"><a href="admin/" class="hover:text-gray-300 my-auto">Admin Panel</a></li>
+            {% endif %}
         </ul>
     </nav>
     <div class="p-4 border-t border-gray-700">
