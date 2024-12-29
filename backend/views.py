@@ -343,14 +343,28 @@ def technical_analysis(request, code):
             response[range_label] = {key: value.dropna().tolist() if not value.dropna().empty else 'N/A' for key, value
                                      in indicators.items()}
             response[range_label]['signal'] = signal
-            print(response)
+            # print(response)
 
         # print(df.to_dict(orient='records'))
 
+        sentiment_df = CloudClient.fetch_articles(str(code))
+        #
+        print(f'Sentiment for code {code}: {sentiment_df}')
+
         return JsonResponse({
-            'analysis': response,
-            'historical_data': df[['Date', 'Last trade price']].to_dict(orient='records')
-        })
+            'analysis': response if response is not None else {},  # Default to an empty dictionary if None
+            'historical_data': (
+                df[['Date', 'Last trade price']].to_dict(orient='records')
+                if df is not None
+                else []
+            ),  # Default to an empty list if df is None
+            'sentiment_analysis': (
+                sentiment_df.to_dict(orient='records')
+                if sentiment_df is not None
+                else []
+            )  # Default to an empty list if sentiment_df is None
+        }, status=200)
+
         # return JsonResponse({'analysis': response})
 
     except Exception as e:
@@ -359,69 +373,12 @@ def technical_analysis(request, code):
         return JsonResponse({'error': f"An error occurred: {str(e)}"}, status=500)
 
 
-def fundamental_analysis(request, code):
-    def calculate_price_trends(df):
-        """
-        Calculate price trends including percentage change over time.
-        """
-        df["Price Change"] = df["Last trade price"].pct_change() * 100
-        return df
-
-    def calculate_turnover_trends(df):
-        """
-        Analyze turnover trends.
-        """
-        avg_turnover = df["Total turnover in denars"].mean()
-        max_turnover = df["Total turnover in denars"].max()
-        min_turnover = df["Total turnover in denars"].min()
-
-        return {
-            "Average Turnover": avg_turnover,
-            "Maximum Turnover": max_turnover,
-            "Minimum Turnover": min_turnover
-        }
-
-    def volume_analysis(df):
-        """
-        Analyze trading volume trends.
-        """
-        total_volume = df["Volume"].sum()
-        avg_volume = df["Volume"].mean()
-        max_volume = df["Volume"].max()
-        min_volume = df["Volume"].min()
-
-        return {
-            "Total Volume": total_volume,
-            "Average Volume": avg_volume,
-            "Maximum Volume": max_volume,
-            "Minimum Volume": min_volume
-        }
-
-    def volatility_analysis(df):
-        """
-        Calculate volatility using the range of Max and Min prices.
-        """
-        df["Volatility"] = df["Max"] - df["Min"]
-        avg_volatility = df["Volatility"].mean()
-        return {
-            "Average Volatility": avg_volatility
-        }
-
-    # Perform Fundamental Analysis
-    df = CloudClient.fetch_data(code)
-    df = prepare_stock_data_analysis(df)
-    df['Last trade price'] = df['Last trade price'].fillna(method='ffill').fillna(method='bfill')
-    df = calculate_price_trends(df)
-    turnover_trends = calculate_turnover_trends(df)
-    volume_trends = volume_analysis(df)
-    volatility = volatility_analysis(df)
-
+def sentiment_analysis(request, code):
+    print('anything bro')
+    df = CloudClient.fetch_articles(code.code)
     return JsonResponse({
-        'turnover_trends': turnover_trends,
-        'volume_trends': volume_trends,
-        'volatility': volatility,
+        'sentiment_data': df.to_dict(orient='records')
     })
-
 
 # Admin-specific populate stocks
 @staff_member_required

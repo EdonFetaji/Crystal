@@ -107,15 +107,102 @@
         </div>
 </div>
 
+<div style="color: whitesmoke">Sentiment analysis:</div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+    <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+        <div class="px-6 py-4 bg-gray-700">
+            <h2 class="text-2xl font-bold text-white">Sentiment Analysis</h2>
+            <p class="text-gray-300 mt-1">Market sentiment and social media analysis</p>
+        </div>
+
+        <div class="p-6 bg-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Overall Sentiment Card -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Overall Sentiment</h3>
+                    <div id="sentimentScore" class="text-4xl font-extrabold text-center my-4">
+                        <!-- Will be populated by JS -->
+                        <div class="animate-pulse bg-gray-200 h-12 w-24 mx-auto rounded"></div>
+                    </div>
+                    <div id="sentimentLabel" class="text-center text-lg font-semibold">
+                        <!-- Will be populated by JS -->
+                        <div class="animate-pulse bg-gray-200 h-6 w-32 mx-auto rounded"></div>
+                    </div>
+                </div>
+
+                <!-- Sentiment Breakdown -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Sentiment Breakdown</h3>
+                    <div class="space-y-4">
+                        <div class="relative pt-1">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-semibold inline-block text-green-600">
+                                        Positive
+                                    </span>
+                                </div>
+                                <div id="positivePercentage" class="text-xs font-semibold inline-block text-green-600">
+                                    <!-- Will be populated by JS -->
+                                </div>
+                            </div>
+                            <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
+                                <div id="positiveBar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500 transition-all duration-500"></div>
+                            </div>
+                        </div>
+                        <div class="relative pt-1">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-semibold inline-block text-yellow-600">
+                                        Neutral
+                                    </span>
+                                </div>
+                                <div id="neutralPercentage" class="text-xs font-semibold inline-block text-yellow-600">
+                                    <!-- Will be populated by JS -->
+                                </div>
+                            </div>
+                            <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-yellow-200">
+                                <div id="neutralBar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-yellow-500 transition-all duration-500"></div>
+                            </div>
+                        </div>
+                        <div class="relative pt-1">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-semibold inline-block text-red-600">
+                                        Negative
+                                    </span>
+                                </div>
+                                <div id="negativePercentage" class="text-xs font-semibold inline-block text-red-600">
+                                    <!-- Will be populated by JS -->
+                                </div>
+                            </div>
+                            <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-red-200">
+                                <div id="negativeBar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-red-500 transition-all duration-500"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Mentions -->
+                <div class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Recent Mentions</h3>
+                    <div id="recentMentions" class="space-y-4">
+                        <!-- Will be populated by JS -->
+                        <div class="animate-pulse space-y-3">
+                            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                            <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                            <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 </div>
 
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-
-
-
-    const stockCode = document.getElementById('stock_code').textContent;
 
     const updateTable = (data) => {
         console.log({{ data.analysis }})
@@ -351,19 +438,158 @@ document.addEventListener('DOMContentLoaded', () => {
     const stockCode_ = document.getElementById('stock_code').textContent;
     const loadingOverlay = document.getElementById('loading-overlay');
 
+    {#________________________________________________________________________________________________________________________#}
+
+    const processSentimentData = (data) => {
+        // Check if sentiment data exists and has entries
+        if (!data['sentiment_analysis'] || !data['sentiment_analysis'].length) {
+            return {
+                overall_score: 0.5,
+                positive_percentage: "0.0",
+                neutral_percentage: "100.0",
+                negative_percentage: "0.0",
+                recent_mentions: []
+            };
+        }
+
+        const sentiments = data['sentiment_analysis'].flatMap(item =>
+            item['sentiment_summary'].split(', '));
+
+        const total = sentiments.length || 1; // Prevent division by zero
+        const sentimentCounts = {
+            Positive: sentiments.filter(s => s === 'Positive').length,
+            Neutral: sentiments.filter(s => s === 'Neutral').length,
+            Negative: sentiments.filter(s => s === 'Negative').length
+        };
+
+        return {
+            overall_score: (sentimentCounts.Positive + sentimentCounts.Neutral * 0.5) / total,
+            positive_percentage: ((sentimentCounts.Positive / total) * 100).toFixed(1),
+            neutral_percentage: ((sentimentCounts.Neutral / total) * 100).toFixed(1),
+            negative_percentage: ((sentimentCounts.Negative / total) * 100).toFixed(1),
+            recent_mentions: data['sentiment_analysis'].slice(0, 5).map(article => ({
+                text: article.title || 'No Title',
+                sentiment: article['sentiment_summary'].split(', ')
+                    .filter(s => s === 'Positive').length /
+                    article['sentiment_summary'].split(', ').length,
+                source: article.link ? new URL(article.link).hostname : 'Source unavailable',
+                time: article.date ? new Date(article.date).toLocaleDateString() : 'Date unavailable',
+                content: (article.content || 'No content available').substring(0, 100) + '...'
+            }))
+        };
+    };
+
+    const updateSentimentUI = (data) => {
+        const processedData = processSentimentData(data);
+
+        // Update overall sentiment score
+        const sentimentScoreDiv = document.getElementById('sentimentScore');
+        sentimentScoreDiv.innerHTML = `${(processedData.overall_score * 100).toFixed(1)}%`;
+
+        const sentimentLabel = document.getElementById('sentimentLabel');
+        const { labelText, labelColor } = processedData.overall_score >= 0.6
+            ? { labelText: 'Bullish', labelColor: 'text-green-600' }
+            : processedData.overall_score <= 0.4
+                ? { labelText: 'Bearish', labelColor: 'text-red-600' }
+                : { labelText: 'Neutral', labelColor: 'text-yellow-600' };
+
+        sentimentLabel.textContent = labelText;
+        sentimentLabel.className = `text-center text-lg font-semibold ${labelColor}`;
+
+        // Update sentiment breakdown bars and percentages
+    ['positive', 'neutral', 'negative'].forEach(sentiment => {
+    const bar = document.getElementById(`${sentiment}`);
+    const percentage = document.getElementById(`${sentiment}Percentage`);
+
+    if (bar && percentage) {
+        const percentageValue = processedData[`${sentiment}_percentage`];
+        console.log(percentageValue)
+        // Set the width of the bar based on percentage
+        bar.style.width = `${percentageValue}%`;
+
+        // Set the text content of the percentage
+        percentage.textContent = `${percentageValue}%`;
+
+        // Change the color of the bar based on sentiment
+        if (sentiment === 'positive') {
+            bar.style.backgroundColor = 'green';  // Positive sentiment color
+        } else if (sentiment === 'neutral') {
+            bar.style.backgroundColor = 'gray';  // Neutral sentiment color
+        } else if (sentiment === 'negative') {
+            bar.style.backgroundColor = 'red';  // Negative sentiment color
+        }
+    }
+});
+
+
+        // Update recent mentions
+        const mentionsContainer = document.getElementById('recentMentions');
+        if (processedData.recent_mentions.length === 0) {
+            mentionsContainer.innerHTML = `
+                <div class="text-center text-gray-500">
+                    No recent mentions available
+                </div>`;
+        } else {
+            mentionsContainer.innerHTML = processedData.recent_mentions
+                .map(mention => `
+                    <div class="border-l-4 ${
+                        mention.sentiment > 0.5 ? 'border-green-500' :
+                        mention.sentiment < 0.5 ? 'border-red-500' :
+                        'border-yellow-500'
+                    } pl-4 mb-4">
+                        <p class="text-sm font-medium text-gray-900">${mention.text}</p>
+                        <p class="text-sm text-black text-center mt-1">${mention.content}</p>
+                        <p class="text-xs text-gray-400 mt-1">${mention.source} • ${mention.time}</p>
+                    </div>
+                `).join('');
+        }
+    };
+
+    // Set up event listeners for time range buttons
+    document.querySelectorAll('.time-range-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            document.querySelectorAll('.time-range-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-800');
+            });
+            e.target.classList.add('bg-indigo-800');
+            {#fetchAndUpdateAll();#}
+        });
+    });
+
+
     const fetchAnalysis = (range) => {
         loadingOverlay.classList.remove('hidden');  // Show loading
+
         fetch(`/stocks/${stockCode_}/technical-analysis/`)
-            .then(response => response.json())
-            .then(data => {
-                updateTable(data);
-                updatePlots(data);
-                loadingOverlay.classList.add('hidden');  // Hide loading
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
             })
-            .catch(error => {
-                console.error('Error:', error);
-                loadingOverlay.classList.add('hidden');  // Hide loading on error
-            });
+            .then(data => {
+            if (!data) {
+                throw new Error('No data received from the server.');
+            }
+
+            updateTable(data);
+            updatePlots(data);
+            {#console.log(data['sentiment_analysis'])#}
+            if (data['sentiment_analysis'] && Object.keys(data['sentiment_analysis']).length > 0) {
+                processSentimentData(data);
+                updateSentimentUI(data);
+            } else {
+                console.warn('No sentiment analysis data available.');
+            }
+
+            loadingOverlay.classList.add('hidden');  // Hide loading
+    })
+    .catch(error => {
+        console.error('Error:', error.message);
+        loadingOverlay.classList.add('hidden');  // Hide loading on error
+    });
+
+
     };
 
     // Set up event listeners for time range buttons
@@ -379,15 +605,18 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchAnalysis(range);
         });
     });
-
-    // Initial load
-    fetchAnalysis('1d');
+    fetchAnalysis();
 });
 </script>
     <style>
-    th{
-        font-weight: bolder !important;
-    }
+        th{
+            font-weight: bolder !important;
+        }
+        #recentMentions {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
     </style>
 {% endblock %}
 
