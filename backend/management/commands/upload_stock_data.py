@@ -19,8 +19,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 from celery import shared_task
 from django.conf import settings
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Crystal.settings')
 import django
+
 django.setup()
 from backend.models import Stock
 
@@ -33,6 +35,7 @@ MAX_WORKERS = 10
 s3_executor = ThreadPoolExecutor(max_workers=MAX_WORKERS)
 s3_client_pool = Queue(maxsize=MAX_WORKERS)
 
+
 def initialize_s3_client_pool():
     for _ in range(MAX_WORKERS):
         s3_client = boto3.client(
@@ -43,9 +46,11 @@ def initialize_s3_client_pool():
         )
         s3_client_pool.put(s3_client)
 
+
 async def append_stock_data_to_cloud_async(code, new_df):
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(s3_executor, append_stock_data_to_cloud, code, new_df)
+
 
 def append_stock_data_to_cloud(code, new_df):
     s3 = s3_client_pool.get()  # Acquire an S3 client from the pool
@@ -83,6 +88,7 @@ def append_stock_data_to_cloud(code, new_df):
         print(f"Error uploading data: {e}")
     finally:
         s3_client_pool.put(s3)
+
 
 async def process_data(stock, stock_df: pd.DataFrame):
     def is_valid_date_format(date_string):
@@ -142,6 +148,7 @@ async def process_data(stock, stock_df: pd.DataFrame):
     formatted_data = format_data(stock_df)
     await append_stock_data_to_cloud_async(stock, formatted_data)
 
+
 async def get_one_year_stock_data(session, stockname, from_date, until_date):
     data = {
         "FromDate": from_date.strftime("%m/%d/%Y"),
@@ -166,10 +173,12 @@ async def get_one_year_stock_data(session, stockname, from_date, until_date):
                     print(f"No tables found for {stockname} in {from_date.year}.")
 
             else:
-                print(f"HTTP RESPONSE ERROR: Failed to retrieve data for {stockname} in {from_date.year}, Status: {response.status}")
+                print(
+                    f"HTTP RESPONSE ERROR: Failed to retrieve data for {stockname} in {from_date.year}, Status: {response.status}")
 
     except Exception as e:
         print(f"Error fetching data for {stockname} in {from_date.year}: {e}")
+
 
 async def get_all_data_for_one_stock(session, stock, last_date):
     data_array = []
@@ -204,12 +213,14 @@ async def get_all_data_for_one_stock(session, stock, last_date):
 
     return {'Code': stock, 'last_modified': datetime.now().date(), 'price': price, 'change': change}
 
+
 async def get_all_stocks_data(stocks):
     connector = aiohttp.TCPConnector(limit_per_host=50, ttl_dns_cache=300)
     async with aiohttp.ClientSession(connector=connector) as session:
         tasks = [get_all_data_for_one_stock(session, stock['Code'], stock['Date']) for stock in stocks]
         results = await asyncio.gather(*tasks)
         return results
+
 
 async def get_stock_names():
     response = requests.get("https://www.mse.mk/en/stats/symbolhistory/ALK")
@@ -238,16 +249,29 @@ def get_last_modified_date_from_db():
     }
     return stock_last_modified_dict
 
+
 @sync_to_async
 def update_stock_data(stock_data):
+    existing_stock = Stock.objects.filter(code=stock_data['Code']).first()
+
+    defaults = {'last_modified': stock_data.get('last_modified')}
+
+    if stock_data.get('price') is not None:
+        defaults['price'] = clean_value(stock_data.get('price'))
+    elif existing_stock:
+        defaults['price'] = existing_stock.price
+
+    if stock_data.get('change') is not None:
+        defaults['change'] = clean_value(stock_data.get('change'))
+    elif existing_stock:
+        defaults['change'] = existing_stock.change
+
+    # Update or create the stock record
     Stock.objects.update_or_create(
         code=stock_data['Code'],
-        defaults={
-            'last_modified': stock_data.get('last_modified'),
-            'price': clean_value(stock_data.get('price')),
-            'change': clean_value(stock_data.get('change'))
-        }
+        defaults=defaults
     )
+
 
 def clean_value(val):
     if isinstance(val, str):
@@ -255,6 +279,7 @@ def clean_value(val):
     if str(val) == "nan":
         return 0
     return val
+
 
 async def main():
     initialize_s3_client_pool()
@@ -264,9 +289,6 @@ async def main():
     for s in stock_objects:
         if s and s.get('Code'):
             await update_stock_data(s)
-
-# if __name__ == "__main__":
-#     asyncio.run(main())
 
 @shared_task
 def run_stock_update():
