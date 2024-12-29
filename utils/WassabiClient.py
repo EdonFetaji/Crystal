@@ -67,6 +67,29 @@ class WasabiClient:
         except ClientError as e:
             print(f"Error uploading data: {e}")
 
+    def update_or_create_articles(self, code: str, new_df: pd.DataFrame):
+        cloud_key = f"Articles/{code}.csv"
+
+        try:
+            try:
+                existing_file = self.s3_client.get_object(Bucket=self.bucket, Key=cloud_key)
+                existing_df = pd.read_csv(io.StringIO(existing_file['Body'].read().decode('utf-8')))
+            except ClientError as e:
+                if e.response['Error']['Code'] == 'NoSuchKey':
+                    existing_df = None
+                else:
+                    print(f"Error fetching existing data: {e}")
+                    return False
+
+            combined_df = pd.concat([new_df, existing_df]).drop_duplicates() if existing_df is not None else new_df
+            csv_buffer = io.StringIO()
+            combined_df.to_csv(csv_buffer, index=False)
+            csv_buffer.seek(0)
+            self.s3_client.put_object(Bucket=self.bucket, Key=cloud_key, Body=csv_buffer.getvalue())
+            print(f"Successfully appended and uploaded data for {code}.")
+        except ClientError as e:
+            print(f"Error uploading data: {e}")
+
 
     def fetch_articles(self, code: str):
         cloud_key = f"Articles/{code}.csv"
