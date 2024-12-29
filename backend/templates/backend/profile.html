@@ -45,12 +45,12 @@
                 <table class="table-auto w-full border-collapse">
                     <thead class="bg-gray-200 text-gray-700">
                     <tr>
-                        <th class="px-4 py-2 text-left">Symbol</th>
-                        <th class="px-4 py-2 text-left">Last</th>
-                        <th class="px-4 py-2 text-left">Change</th>
-                        <th class="px-4 py-2 text-left">Hgh</th>
-                        <th class="px-4 py-2 text-left">Low</th>
-                        <th class="px-4 py-2 text-left">Time</th>
+                        <th class="px-4 py-2 text-center font-extrabold">Symbol</th>
+                        <th class="px-4 py-2 text-center font-extrabold">Last</th>
+                        <th class="px-4 py-2 text-center font-extrabold">Change</th>
+{#                        <th class="px-4 py-2 text-left">Max</th>#}
+{#                        <th class="px-4 py-2 text-left">Min</th>#}
+                        <th class="px-4 py-2 text-center font-extrabold">Time</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -58,11 +58,12 @@
                         <tr class="hover:bg-gray-100 border-b">
                             <td class="px-4 py-2 font-semibold">{{ stock.code }}</td>
                             <td class="px-4 py-2">{{ stock.last|default:"-" }}</td>
-                            <td class="px-4 py-2">{{ stock.change|default:"-" }}{% if stock.change %}%{% endif %}</td>
-                            <td class="px-4 py-2">{{ stock.high|default:"-" }}</td>
-                            <td class="px-4 py-2">{{ stock.low|default:"-" }}</td>
+                            <td class="px-4 py-2 {% if stock.change > 0 %}text-green-500{% elif stock.change == 0%}text-blue-500{% else %}text-red-500{% endif %}">
+                            {{ stock.change }}
+                            </td>
                             <td class="px-4 py-2">{{ stock.time|default:"-" }}</td>
                         </tr>
+
                     {% endfor %}
                     </tbody>
                 </table>

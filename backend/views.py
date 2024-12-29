@@ -47,6 +47,13 @@ from ta.volume import OnBalanceVolumeIndicator
 from ta.volatility import BollingerBands
 
 from utils.WassabiClient import get_wassabi_client, WasabiClient
+from django.contrib.auth.decorators import login_required
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
+import aiohttp
+from django.utils.decorators import method_decorator
+
+
 
 CloudClient: WasabiClient = get_wassabi_client()
 
@@ -139,45 +146,39 @@ def watchlist(request):
 #     return render(request, 'backend/profile.html', {'stocks': stocks_watchlist, 'all_stocks': all_stocks}, )
 
 
+def process_stock(stock):
+    """Process individual stock data"""
+    try:
+        df = CloudClient.fetch_data(stock.code)
+        if df is not None and not df.empty:
+            df = prepare_stock_data_analysis(df)
+            return {
+                'code': stock.code,
+                'last': df['Last trade price'].iloc[0] if 'Last trade price' in df.columns else None,
+                'change': df['%chg.'].iloc[0] if '%chg.' in df.columns else None,
+                'max': df['Max'].iloc[0] if 'Max' in df.columns else None,
+                'min': df['Min'].iloc[0] if 'Min' in df.columns else None,
+                'time': df['Date'].iloc[0] if 'Date' in df.columns else None
+            }
+    except Exception as e:
+        print(f"Error fetching data for {stock.code}: {str(e)}")
+
+    return {
+        'code': stock.code,
+        'last': None,
+        'change': None,
+        'max': None,
+        'min': None,
+        'time': None
+    }
+
+
 @login_required
 def profile(request):
     all_stocks = Stock.objects.all()
-    stocks_watchlist = request.user.app_user.watchlist.all().order_by('code')
+    stocks_watchlist = list(request.user.app_user.watchlist.all().order_by('code'))
 
-    def process_stock(stock):
-
-        df = CloudClient.fetch_data(stock)
-
-        if df is not None and not df.empty:
-            df = prepare_stock_data_analysis(df)
-
-            # Select the latest stock data (first row after sorting)
-            last = df['Last trade price'].iloc[0] if 'Last trade price' in df.columns else None
-            change = df['%chg.'].iloc[0] if '%chg.' in df.columns else None
-            high = df['Max'].iloc[0] if 'Max' in df.columns else None
-            low = df['Min'].iloc[0] if 'Min' in df.columns else None
-            time = df['Date'].iloc[0] if 'Date' in df.columns else None
-
-            return {
-                'code': stock.code,
-                'last': last,
-                'change': change,
-                'high': high,
-                'low': low,
-                'time': time
-            }
-        else:
-            return {
-                'code': stock.code,
-                'last': None,
-                'change': None,
-                'high': None,
-                'low': None,
-                'time': None
-            }
-
-    # Use ThreadPoolExecutor for parallel processing
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         stock_data = list(executor.map(process_stock, stocks_watchlist))
 
     return render(
@@ -188,6 +189,7 @@ def profile(request):
             'all_stocks': all_stocks,
         }
     )
+
 
 
 @login_required
