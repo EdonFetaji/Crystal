@@ -1,0 +1,14 @@
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copy project files
+COPY . .
+
+# Command to run Celery worker
+CMD ["celery", "-A", "Crystal", "worker", "--loglevel=info"]

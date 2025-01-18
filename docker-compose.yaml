@@ -1,0 +1,42 @@
+services:
+  crystal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crystal_app
+    ports:
+      - "8001:8000"  # Maps host port 8001 to container port 8000
+    volumes:
+      - .:/app
+    networks:
+      - shared_network
+    environment:
+      - DEBUG=True
+      - ML_MODULE_URL=http://ml_module:8000  # URL for API calls to ML_Module
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:6-alpine
+    container_name: redis_server
+    networks:
+      - shared_network
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile-celery
+    container_name: celery_worker
+    volumes:
+      - .:/app
+    networks:
+      - shared_network
+    depends_on:
+      - redis
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+networks:
+  shared_network:
+    external: true  # Declare this as an external network
