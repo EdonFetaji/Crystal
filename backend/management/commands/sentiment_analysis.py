@@ -13,6 +13,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Crystal.settings')
 django.setup()
 from backend.models import Stock
 from transformers import MarianMTModel, MarianTokenizer, pipeline, AutoTokenizer, AutoModelForSequenceClassification
+from backend.models import Stock
+from utils.SeleniumHelpers import SeleniumDriverPool
 
 
 def getStockName_db():
@@ -25,59 +27,14 @@ def getStockCode_db():
     return [x['code'] for x in codes if x['name'] is not None]
 
 
-def create_driver():
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-gpu")
-    return webdriver.Chrome(options=options)
-
-
-class SeleniumDriverPool:
-    def __init__(self, max_size=5):
-        self.pool = Queue(maxsize=max_size)
-        self.lock = threading.Lock()
-        for _ in range(max_size):
-            driver = create_driver()
-            self.pool.put(driver)
-
-    def acquire_driver(self):
-        with self.lock:
-            return self.pool.get()
-
-    def release_driver(self, driver):
-        with self.lock:
-            self.pool.put(driver)
-
-    def close_all_drivers(self):
-        while not self.pool.empty():
-            driver = self.pool.get()
-            driver.quit()
-
-
 stocks = getStockName_db()
-
-
-def filter_stockname():
-    stock_names = []
-    for company in stocks:
-        parts = company.split()
-        # get rid of city names and other suffixes for better search
-        filtered = [part for part in parts if
-                    part not in {"AD", "Skopje", "Bitola", "Tetovo", "Prilep", "Kavadarci", "Ohrid", "Veles",
-                                 "Kumanovo", "Sveti", "Nikole", "Debar", "Radovis", "Stip", "Ilinden", "Kicevo",
-                                 "Strumica", " - dolgorocno suspendirano od kotacija"}]
-        stock_names.append(" ".join(filtered))
-
-    return stock_names
 
 
 def scrape_kapitalMK():
     stock_dataframes = {}
 
     try:
-        filtered_stocks = filter_stockname()
+        filtered_stocks = Stock.get_filtered_stock_names()
         stock_codes = getStockCode_db()
     except NameError:
         print("Error: Required functions (filter_stockname, getStockCode_db) are not defined.")
@@ -127,7 +84,8 @@ def scrape_kapitalMK():
                         actual_post = post.split('ПОВРЗАНИ ТЕМИ:')[0]
 
                         if len(actual_post) < 5000:  # Skip long reads
-                            data.append({'date': date_published, 'title': title, 'text': actual_post, 'link': link, 'from': 'kapital.mk'})
+                            data.append({'date': date_published, 'title': title, 'text': actual_post, 'link': link,
+                                         'from': 'kapital.mk'})
                         else:
                             print(f"Skipping article {link} due to excessive length.")
 
@@ -150,9 +108,10 @@ def scrape_kapitalMK():
     pool1.close_all_drivers()
     return stock_dataframes
 
+
 def scrape_biznisinfoMK():
     stock_dataframes = {}
-    filtered_stocks = filter_stockname()
+    filtered_stocks = Stock.get_filtered_stock_names()
     stock_codes = getStockCode_db()
     pool2 = SeleniumDriverPool(max_size=20)
     while True:
@@ -195,7 +154,8 @@ def scrape_biznisinfoMK():
                             actual_post = post.split('Можеби ќе ве интересира и...')[0]
 
                             # if stock_name in actual_post:
-                            data.append({'date': date_published, 'title': title, 'text': actual_post, 'link': link, 'from': 'biznisinfo.mk'})
+                            data.append({'date': date_published, 'title': title, 'text': actual_post, 'link': link,
+                                         'from': 'biznisinfo.mk'})
 
                         except WebDriverException as e:
                             print(f"Error occurred while processing link {link}: {e}")
@@ -218,9 +178,11 @@ def scrape_biznisinfoMK():
     pool2.close_all_drivers()
     return stock_dataframes
 
+
 # for sentiment
 tokenizer_finbert = AutoTokenizer.from_pretrained("yiyanghkust/finbert-tone")
-model_finbert = AutoModelForSequenceClassification.from_pretrained("yiyanghkust/finbert-tone", output_hidden_states=False)
+model_finbert = AutoModelForSequenceClassification.from_pretrained("yiyanghkust/finbert-tone",
+                                                                   output_hidden_states=False)
 sentiment_analyzer = pipeline("sentiment-analysis", model="yiyanghkust/finbert-tone")
 
 # for translation
