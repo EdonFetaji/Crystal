@@ -4,56 +4,20 @@ import logging
 import os
 from ast import Index
 from datetime import datetime, timedelta
-
 import boto3
 import pandas as pd
-import numpy as np
-import ta.trend
-
-from concurrent.futures import ThreadPoolExecutor
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-
+from utils.StockTechnicalAnalyzer import StockTechnicalAnalyzer
 from .models import Stock
-from django.conf import settings
-from ta.trend import SMAIndicator
-import plotly.graph_objects as go
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
-from ta.momentum import RSIIndicator
-from ta.volatility import BollingerBands
-from plotly.subplots import make_subplots
-from botocore.exceptions import ClientError
 from django.core.paginator import Paginator
 from django.core.management import call_command
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.admin.views.decorators import staff_member_required
-from dotenv import load_dotenv
-
-# tech analysis - Oscilators
-from ta.momentum import RSIIndicator
-from ta.momentum import StochasticOscillator
-from ta.trend import MACD
-from ta.trend import CCIIndicator
-from ta.volume import ChaikinMoneyFlowIndicator
-
-# tech analusis - Moving Averages
-from ta.trend import EMAIndicator
-from ta.trend import SMAIndicator
-from ta.trend import WMAIndicator
-from ta.volume import OnBalanceVolumeIndicator
-from ta.volatility import BollingerBands
-
 from utils.WassabiClient import get_wassabi_client, WasabiClient
 from django.contrib.auth.decorators import login_required
 from concurrent.futures import ThreadPoolExecutor
-import asyncio
-import aiohttp
-from django.utils.decorators import method_decorator
-
-
 
 CloudClient: WasabiClient = get_wassabi_client()
 
@@ -105,8 +69,8 @@ def historical_data(request, code):
     df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
 
     if start_date and end_date:
-        start_date = pd.to_datetime(start_date)  
-        end_date = pd.to_datetime(end_date)  
+        start_date = pd.to_datetime(start_date)
+        end_date = pd.to_datetime(end_date)
 
         filtered_df = df.loc[(df['Date'] >= start_date) & (df['Date'] <= end_date)].copy()
         filtered_df['Date'] = filtered_df['Date'].dt.strftime('%d.%m.%Y')
@@ -123,6 +87,7 @@ def historical_data(request, code):
         'historical_data': filtered_df.to_dict('records'),
         'stock': stock
     })
+
 
 # Helper function for fetching analysis data
 def fetch_analysis_data(request, key, analysis_function):
@@ -193,7 +158,6 @@ def profile(request):
     )
 
 
-
 @login_required
 def add_to_watchlist_from_profile(request):
     if request.method == "POST":
@@ -242,35 +206,10 @@ def prepare_stock_data_analysis(df):
         return None
 
 
-def hull_moving_average(close_prices, window_size):
-    if window_size < 1:
-        raise ValueError("Window size must be greater than or equal to 1.")
-
-    ema1_indicator = EMAIndicator(close=close_prices, window=window_size)
-    ema1 = ema1_indicator.ema_indicator()  # Get the EMA values
-
-    ema2_indicator = EMAIndicator(ema1, window_size // 2)
-    ema2 = ema2_indicator.ema_indicator()  # Get the EMA values for the second EMA
-
-    hma = (2 * ema1 - ema2).apply(lambda x: x ** 0.5)  # Ensure the result is a numeric value
-    return hma
-
-
-def kama(close_prices, window_size, sensitivity=2):
-    time_period = window_size / sensitivity
-    ema1 = close_prices.ewm(span=window_size, min_periods=1, adjust=False).mean()
-    ema2 = close_prices.ewm(span=time_period, min_periods=1, adjust=False).mean()
-
-    kama_values = ema1 + (ema2 - ema1) / (1 + sensitivity)
-
-    return kama_values
-
-
 def technical_analysis(request, code):
     try:
 
         df = CloudClient.fetch_data(code)
-        # df = get_stock_csv_data(code)
         if df is None or df.empty:
             return JsonResponse({'error': f"No data found for stock: {code}"}, status=404)
 
@@ -300,74 +239,53 @@ def technical_analysis(request, code):
             volume_data = data['Volume']
 
             window_size = {'1d': 1, '1w': 7, '1m': 30}[range_label]
+
             indicators = {
-                'rsi': RSIIndicator(close=close_prices, window=window_size).rsi(),
-                'Stochastic_Oscillator': StochasticOscillator(close=close_prices, high=high_prices, low=low_prices,
-                                                              window=window_size).stoch(),
-                'MACD': MACD(close=close_prices, window_slow=26, window_fast=12, window_sign=9).macd(),
-                'CCI': CCIIndicator(high=high_prices, low=low_prices, close=close_prices, window=window_size).cci(),
-                'Chaikin_Oscillator': ChaikinMoneyFlowIndicator(close=close_prices, high=high_prices, low=low_prices,
-                                                                volume=volume_data,
-                                                                window=window_size).chaikin_money_flow(),
-                'EMA': EMAIndicator(close=close_prices, window=window_size).ema_indicator(),
-                'SMA': SMAIndicator(close=close_prices, window=window_size).sma_indicator(),
-                'OBV': OnBalanceVolumeIndicator(close=close_prices, volume=volume_data).on_balance_volume(),
-                'Bollinger_upper_band': BollingerBands(close=close_prices, window=window_size,
-                                                       window_dev=2).bollinger_hband(),
-                'Bollinger_lower_band': BollingerBands(close=close_prices, window=window_size,
-                                                       window_dev=2).bollinger_lband(),
-                'Bollinger_middle_band': BollingerBands(close=close_prices, window=window_size,
-                                                        window_dev=2).bollinger_mavg(),
-                'WMA': ta.trend.wma_indicator(close_prices),
-                'KAMA': kama(close_prices, window_size + 1),
-                'VMA': (close_prices * volume_data).cumsum() / df['Volume'].cumsum(),
+                'rsi': StockTechnicalAnalyzer.calculate_RSI_indicator(close_prices, window_size),
+                'Stochastic_Oscillator': StockTechnicalAnalyzer.calculate_Stochastic_Oscillator_indicator(close_prices, high_prices, low_prices, window_size),
+                'MACD': StockTechnicalAnalyzer.calculate_MACD_indicator(close_prices),
+                'CCI': StockTechnicalAnalyzer.calculate_CCI_indicator(high_prices, low_prices, close_prices, window_size),
+                'Chaikin_Oscillator': StockTechnicalAnalyzer.calculate_Chaikin_money_flow(close_prices, high_prices, low_prices, volume_data, window_size),
+                'EMA': StockTechnicalAnalyzer.calculate_EMA_indicator(close_prices, window_size),
+                'SMA': StockTechnicalAnalyzer.calculate_SMA_indicator(close_prices, window_size),
+                'WMA': StockTechnicalAnalyzer.calculate_WMA_indicator(close_prices),
+                'KAMA': StockTechnicalAnalyzer.calculate_Kama_indicator(close_prices, window_size + 1),
+                'OBV': StockTechnicalAnalyzer.calculate_OBV_indicator(close_prices, volume_data),
+                'Bollinger_upper_band': StockTechnicalAnalyzer.calculate_Bollinger_upper_band(close_prices, window_size),
+                'Bollinger_lower_band': StockTechnicalAnalyzer.calculate_Bollinger_lower_band(close_prices, window_size),
+                'Bollinger_middle_band': StockTechnicalAnalyzer.calculate_Bollinger_middle_band(close_prices, window_size),
+                'VMA': StockTechnicalAnalyzer.calculate_VMA_indicator(close_prices, volume_data),
                 'date': data['Date']
             }
 
-            # Determine signal
             rsi = indicators['rsi'].iloc[-1] if not indicators['rsi'].isna().all() else None
-            bollinger_upper = indicators['Bollinger_upper_band'].iloc[-1] if not indicators[
-                'Bollinger_upper_band'].isna().all() else None
-            bollinger_lower = indicators['Bollinger_lower_band'].iloc[-1] if not indicators[
-                'Bollinger_lower_band'].isna().all() else None
+            bollinger_upper = indicators['Bollinger_upper_band'].iloc[-1] if not indicators['Bollinger_upper_band'].isna().all() else None
+            bollinger_lower = indicators['Bollinger_lower_band'].iloc[-1] if not indicators['Bollinger_lower_band'].isna().all() else None
             close_price = close_prices.iloc[-1]
 
-            if rsi and bollinger_upper and bollinger_lower:
-                if rsi > 70 or close_price >= bollinger_upper:
-                    signal = "Sell"
-                elif rsi < 30 or close_price <= bollinger_lower:
-                    signal = "Buy"
-                else:
-                    signal = "Hold"
-            else:
-                signal = "Hold"
+            signal = StockTechnicalAnalyzer.determine_signal(rsi, bollinger_upper, bollinger_lower, close_price)
 
-            response[range_label] = {key: value.dropna().tolist() if not value.dropna().empty else 'N/A' for key, value
-                                     in indicators.items()}
+            response[range_label] = {key: value.dropna().tolist() if not value.dropna().empty else 'N/A' for key, value in indicators.items()}
             response[range_label]['signal'] = signal
-            # print(response)
 
-        # print(df.to_dict(orient='records'))
 
         sentiment_df = CloudClient.READ_ARTICLES(str(code))
-        #
-        print(f'Sentiment for code {code}: {sentiment_df}')
+
 
         return JsonResponse({
-            'analysis': response if response is not None else {},  # Default to an empty dictionary if None
+            'analysis': response if response is not None else {},
             'historical_data': (
                 df[['Date', 'Last trade price']].to_dict(orient='records')
                 if df is not None
                 else []
-            ),  # Default to an empty list if df is None
+            ),
             'sentiment_analysis': (
                 sentiment_df.to_dict(orient='records')
                 if sentiment_df is not None
                 else []
-            )  # Default to an empty list if sentiment_df is None
+            )
         }, status=200)
 
-        # return JsonResponse({'analysis': response})
 
     except Exception as e:
         import traceback
@@ -381,6 +299,7 @@ def sentiment_analysis(request, code):
     return JsonResponse({
         'sentiment_data': df.to_dict(orient='records')
     })
+
 
 # Admin-specific populate stocks
 @staff_member_required

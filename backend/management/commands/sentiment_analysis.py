@@ -1,8 +1,8 @@
 import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import WebDriverException
-from datetime import datetime
+from selenium.common.exceptions import WebDriverException, TimeoutException
+from datetime import datetime, time
 import threading
 from queue import Queue
 import os
@@ -56,45 +56,14 @@ class SeleniumDriverPool:
             driver.quit()
 
 
-pool1 = SeleniumDriverPool(max_size=20)
-pool2 = SeleniumDriverPool(max_size=20)
-
-stocks = ["Komercijalna banka AD Skopje", "Alkaloid AD Skopje", "DS Smith AD Skopje", "Fersped AD Skopje",
-          "Granit AD Skopje", "Hoteli Metropol Ohrid", "Internesnel Hotels AD Skopje", "Makedonijaturist AD Skopje",
-          "Makosped AD Skopje", "Makoteks AD Skopje", "Makpetrol AD Skopje", "Makstil AD Skopje", "Replek AD Skopje",
-          "RZ Inter-Transsped AD Skopje", "RZ Uslugi AD Skopje", "Skopski Pazar AD Skopje", "Stopanska banka AD Bitola",
-          "Teteks AD Tetovo", "TTK Banka AD Skopje", "Tutunski kombinat AD Prilep", "Vitaminka AD Prilep",
-          "VV Tikves AD Kavadarci", "Zito Luks AD Skopje", "ZK Pelagonija AD Bitola", "Ading AD Skopje",
-          "Agromehanika AD Skopje", "Angropromet Tikvesanka AD Kavadarci",
-          "ArcelorMittal (HRM) AD Skopje", "Automakedonija AD Skopje",
-          "BIM AD Sveti Nikole", "Blagoj Tufanov AD Radovis",
-          "Cementarnica USJE AD Skopje", "Centralna kooperativna banka AD Skopje", "Debarski Bani –Capa AD Debar",
-          "Dimko Mitrev AD Veles", "Evropa AD Skopje", "Fabrika Karpos AD Skopje", "FAKOM AD Skopje",
-          "Fruktal Mak AD Skopje", "Fustelarko Borec AD Bitola", "FZC 11-ti OKTOMVRI AD Kumanovo",
-          "GD-TIKVES AD Kavadarci", "Geras Cunev Konfekcija AD Strumica", "Geras Cunev Trgovija AD Strumica",
-          "Grozd AD Strumica", "GTC AD Skopje", "Interpromet AD Tetovo", "Klanica so ladilnik AD Strumica",
-          "Kristal 1923 AD Veles", "Liberti AD Skopje", "Lotarija na Makedonija AD Skopje",
-          "Makedonija osiguruvane AD Skopje - Viena Insurens Grup", "Makedonski Telekom AD – Skopje",
-          "Makpromet AD Stip", "Mermeren kombinat AD Prilep", "Moda AD Sveti Nikole", "MZT Pumpi AD Skopje",
-          "Nemetali Ograzden AD Strumica", "NLB Banka AD Skopje", "Nova Stokovna kuka AD Strumica", "OILKO KDA Skopje",
-          "OKTA AD Skopje", "Oranzerii Hamzali Strumica", "Patnicki soobrakaj Transkop AD Bitola",
-          "Pekabesko AD Kadino Ilinden", "Pelisterka AD Skopje", "Popova Kula AD Demir Kapija",
-          "Prilepska pivarnica AD Prilep", "Rade Koncar- Aparatna tehnika AD Skopje", "Rudnici Banani AD Skopje",
-          "RZ Ekonomika AD Skopje", "RZ Tehnicka Kontrola AD Skopje", "Sigurnosno staklo AD Prilep",
-          "Sileks AD Kratovo", "Slavej AD Skopje", "Sovremen dom AD Prilep", "Stokopromet AD Skopje",
-          "Stopanska banka AD Skopje", "Strumicko pole s. Vasilevo",
-          "Tajmiste AD Kicevo", "TEAL AD Tetovo", "Tehnokomerc AD Skopje",
-          "Trgotekstil Maloprodazba AD Skopje", "Triglav Osiguruvane AD Skopje",
-          "Trudbenik AD Ohrid", "Ugotur AD Skopje", "UNI Banka AD Skopje",
-          "Vabtek MZT AD Skopje", "Veteks AD Veles", "ZAS AD Skopje", "Zito Karaorman AD Kicevo",
-          "Zito Polog AD Tetovo"]
+stocks = getStockName_db()
 
 
 def filter_stockname():
     stock_names = []
     for company in stocks:
         parts = company.split()
-        # get rid of city names for better search
+        # get rid of city names and other suffixes for better search
         filtered = [part for part in parts if
                     part not in {"AD", "Skopje", "Bitola", "Tetovo", "Prilep", "Kavadarci", "Ohrid", "Veles",
                                  "Kumanovo", "Sveti", "Nikole", "Debar", "Radovis", "Stip", "Ilinden", "Kicevo",
@@ -106,75 +75,86 @@ def filter_stockname():
 
 def scrape_kapitalMK():
     stock_dataframes = {}
-    filtered_stocks = filter_stockname()
-    stock_codes = getStockCode_db()
 
-    while True:
-        for stock_name, stock_code in zip(filtered_stocks, stock_codes):
-            data = []
+    try:
+        filtered_stocks = filter_stockname()
+        stock_codes = getStockCode_db()
+    except NameError:
+        print("Error: Required functions (filter_stockname, getStockCode_db) are not defined.")
+        return {}
 
-            try:
-                driver = pool1.acquire_driver()
-                i = 1
+    try:
+        pool1 = SeleniumDriverPool(max_size=20)
+    except NameError:
+        print("Error: SeleniumDriverPool is not defined.")
+        return {}
 
-                while True:
-                    driver.get(f'https://kapital.mk/page/{i}/?s={stock_name}')
-                    html_content = driver.page_source
+    for stock_name, stock_code in zip(filtered_stocks, stock_codes):
+        data = []
+        try:
+            driver = pool1.acquire_driver()
+            i = 1
 
-                    if 'Error 404!' in html_content or 'Sorry, your search did not match any entries.' in html_content:
-                        break
+            while True:
+                driver.get(f'https://kapital.mk/page/{i}/?s={stock_name}')
+                time.sleep(2)  # Ensures page loads completely
+                html_content = driver.page_source
 
-                    article_list = driver.find_elements(By.CSS_SELECTOR, ".mvp-blog-story-list li")
+                if 'Error 404!' in html_content or 'Sorry, your search did not match any entries.' in html_content:
+                    break
 
-                    for tag in article_list:
-                        a_tag = tag.find_element(By.CSS_SELECTOR, "a:nth-child(1)")
-                        link = a_tag.get_attribute('href')
-                        print(link)
+                article_list = driver.find_elements(By.CSS_SELECTOR, ".mvp-blog-story-list li")
 
-                        try:
-                            nd = pool1.acquire_driver()
-                            nd.get(link)
-                            date = nd.find_element(By.CSS_SELECTOR, 'time')
-                            date_published = datetime.fromisoformat(date.get_attribute('datetime')).strftime("%d.%m.%Y")
-                            print()
-                            print(date_published)
-                            print()
-                            post = nd.find_element(By.CSS_SELECTOR, ".mvp-post-soc-out").text
+                for tag in article_list:
+                    a_tag = tag.find_element(By.CSS_SELECTOR, "a:nth-child(1)")
+                    link = a_tag.get_attribute('href')
+                    print(link)
 
-                            actual_post = post.split('ПОВРЗАНИ ТЕМИ:')[0]
-                            print(actual_post)
+                    try:
+                        nd = pool1.acquire_driver()
+                        nd.set_page_load_timeout(15)  # Increase timeout to 15 seconds
+                        nd.get(link)
+                        time.sleep(2)
 
-                            title = a_tag.text
-                            data.append({'date': date_published, 'title': title, 'text': actual_post, 'link': link,
-                                         'from': 'kapital.mk'})
+                        date = nd.find_element(By.CSS_SELECTOR, 'time')
+                        date_published = datetime.fromisoformat(date.get_attribute('datetime')).strftime("%d.%m.%Y")
+                        print(date_published)
 
-                        except WebDriverException as e:
-                            print(f"Error occurred while processing link {link}: {e}")
+                        title = nd.find_element(By.CSS_SELECTOR, "h1.entry-title").text
+                        print(title)
 
-                        finally:
-                            pool1.release_driver(nd)
+                        post = nd.find_element(By.CSS_SELECTOR, ".mvp-post-soc-out").text
+                        actual_post = post.split('ПОВРЗАНИ ТЕМИ:')[0]
 
-                    i += 1
+                        if len(actual_post) < 5000:  # Skip long reads
+                            data.append({'date': date_published, 'title': title, 'text': actual_post, 'link': link, 'from': 'kapital.mk'})
+                        else:
+                            print(f"Skipping article {link} due to excessive length.")
 
-            except WebDriverException as e:
-                print(f"Error occurred for stock {stock_name} on page {i}: {e}")
+                    except TimeoutException:
+                        print(f"Timeout occurred while processing link {link}, skipping article.")
+                    except WebDriverException as e:
+                        print(f"Error occurred while processing link {link}: {e}")
+                    finally:
+                        pool1.release_driver(nd)
 
-            finally:
-                pool1.release_driver(driver)
+                i += 1
 
-            stock_dataframes[stock_code] = pd.DataFrame(data)
-        break
+        except WebDriverException as e:
+            print(f"Error occurred for stock {stock_name} on page {i}: {e}")
+        finally:
+            pool1.release_driver(driver)
+
+        stock_dataframes[stock_code] = pd.DataFrame(data)
 
     pool1.close_all_drivers()
-
     return stock_dataframes
-
 
 def scrape_biznisinfoMK():
     stock_dataframes = {}
     filtered_stocks = filter_stockname()
     stock_codes = getStockCode_db()
-
+    pool2 = SeleniumDriverPool(max_size=20)
     while True:
 
         for stock_name, stock_code in zip(filtered_stocks, stock_codes):
@@ -215,8 +195,7 @@ def scrape_biznisinfoMK():
                             actual_post = post.split('Можеби ќе ве интересира и...')[0]
 
                             # if stock_name in actual_post:
-                            data.append({'date': date_published, 'title': title, 'text': actual_post, 'link': link,
-                                         'from': 'biznisinfo.mk'})
+                            data.append({'date': date_published, 'title': title, 'text': actual_post, 'link': link, 'from': 'biznisinfo.mk'})
 
                         except WebDriverException as e:
                             print(f"Error occurred while processing link {link}: {e}")
@@ -239,17 +218,14 @@ def scrape_biznisinfoMK():
     pool2.close_all_drivers()
     return stock_dataframes
 
-
 # for sentiment
 tokenizer_finbert = AutoTokenizer.from_pretrained("yiyanghkust/finbert-tone")
-model_finbert = AutoModelForSequenceClassification.from_pretrained("yiyanghkust/finbert-tone",
-                                                                   output_hidden_states=False)
+model_finbert = AutoModelForSequenceClassification.from_pretrained("yiyanghkust/finbert-tone", output_hidden_states=False)
 sentiment_analyzer = pipeline("sentiment-analysis", model="yiyanghkust/finbert-tone")
 
 # for translation
 tokenizer_translator = MarianTokenizer.from_pretrained('Helsinki-NLP/opus-mt-mk-en')
 model_translator = MarianMTModel.from_pretrained('Helsinki-NLP/opus-mt-mk-en')
-
 
 
 def sentiment_analysis(news):
