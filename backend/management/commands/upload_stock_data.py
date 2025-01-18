@@ -293,3 +293,6 @@ async def main():
 @shared_task
 def run_stock_update():
     asyncio.run(main())
+
+if __name__ == '__main__':
+    asyncio.run(main())
