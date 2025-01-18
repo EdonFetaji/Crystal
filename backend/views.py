@@ -347,7 +347,7 @@ def technical_analysis(request, code):
 
         # print(df.to_dict(orient='records'))
 
-        sentiment_df = CloudClient.fetch_articles(str(code))
+        sentiment_df = CloudClient.READ_ARTICLES(str(code))
         #
         print(f'Sentiment for code {code}: {sentiment_df}')
 
