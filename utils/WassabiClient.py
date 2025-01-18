@@ -31,8 +31,8 @@ class WasabiClient:
             print(f"Error fetching data: {e}")
             return None
 
-    def update_or_create(self, code: str, new_df: pd.DataFrame):
-        cloud_key = f"Stock_Data/{code}.csv"
+    def update_or_create(self, code: str, new_df: pd.DataFrame, path: str):
+        cloud_key = f"{path}/{code}.csv"
 
         try:
             try:
@@ -66,15 +66,29 @@ class WasabiClient:
         except ClientError as e:
             print(f"Error uploading data: {e}")
 
+    import io
+    import pandas as pd
+    from botocore.exceptions import ClientError
+
     def fetch_articles(self, code: str):
         cloud_key = f"Articles/{code}.csv"
         try:
             file_response = self.s3_client.get_object(Bucket=self.bucket, Key=cloud_key)
-            file_content = file_response['Body'].read().decode('utf-8')  # Fix typo
+            file_content = file_response['Body'].read().decode('utf-8')
+
+            # Check if file_content is empty
+            if not file_content.strip():
+                print(f"File {cloud_key} is empty.")
+                return pd.DataFrame()  # Return an empty DataFrame instead of None
+
+            # Parse CSV content
             return pd.read_csv(io.StringIO(file_content))
         except ClientError as e:
             print(f"Error fetching data: {e}")
             return None
+        except pd.errors.EmptyDataError:
+            print(f"No data to parse in file {cloud_key}.")
+            return pd.DataFrame()  # Return an empty DataFrame instead
 
 
 def get_wassabi_client():
