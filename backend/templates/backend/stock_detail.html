@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const stockCode_ = document.getElementById('stock_code').textContent;
     const loadingOverlay = document.getElementById('loading-overlay');
 
-    {#________________________________________________________________________________________________________________________#}
+    {##}
 
     const processSentimentData = (data) => {
         // Check if sentiment data exists and has entries
@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const sentiments = data['sentiment_analysis'].flatMap(item =>
-            item['sentiment_summary'].split(', '));
+            item['sentiment'].split(', '));
 
         const total = sentiments.length || 1; // Prevent division by zero
         const sentimentCounts = {
@@ -469,144 +469,124 @@ document.addEventListener('DOMContentLoaded', () => {
             negative_percentage: ((sentimentCounts.Negative / total) * 100).toFixed(1),
             recent_mentions: data['sentiment_analysis'].slice(0, 5).map(article => ({
                 text: article.title || 'No Title',
-                sentiment: article['sentiment_summary'].split(', ')
+                sentiment: article['sentiment'].split(', ')
                     .filter(s => s === 'Positive').length /
-                    article['sentiment_summary'].split(', ').length,
-                source: article.link ? new URL(article.link).hostname : 'Source unavailable',
-                time: article.date ? new Date(article.date).toLocaleDateString() : 'Date unavailable',
-                content: (article.content || 'No content available').substring(0, 100) + '...'
+                    article['sentiment'].split(', ').length,
+                source: new URL(article.link).hostname,
+                time: article.date,
+                content: (article.content || 'No content available').substring(100, 200) + '...',
+                link: article.link
             }))
         };
     };
 
     const updateSentimentUI = (data) => {
-        const processedData = processSentimentData(data);
+            const processedData = processSentimentData(data);
 
-        // Update overall sentiment score
-        const sentimentScoreDiv = document.getElementById('sentimentScore');
-        sentimentScoreDiv.innerHTML = `${(processedData.overall_score * 100).toFixed(1)}%`;
+            // Update overall sentiment score
+            const sentimentScoreDiv = document.getElementById('sentimentScore');
+            sentimentScoreDiv.innerHTML = `${(processedData.overall_score * 100).toFixed(1)}%`;
 
-        const sentimentLabel = document.getElementById('sentimentLabel');
-        const { labelText, labelColor } = processedData.overall_score >= 0.6
-            ? { labelText: 'Bullish', labelColor: 'text-green-600' }
-            : processedData.overall_score <= 0.4
-                ? { labelText: 'Bearish', labelColor: 'text-red-600' }
-                : { labelText: 'Neutral', labelColor: 'text-yellow-600' };
+            const sentimentLabel = document.getElementById('sentimentLabel');
+            const { labelText, labelColor } = processedData.overall_score >= 0.6
+                ? { labelText: 'Bullish', labelColor: 'text-green-600' }
+                : processedData.overall_score <= 0.4
+                    ? { labelText: 'Bearish', labelColor: 'text-red-600' }
+                    : { labelText: 'Neutral', labelColor: 'text-yellow-600' };
 
-        sentimentLabel.textContent = labelText;
-        sentimentLabel.className = `text-center text-lg font-semibold ${labelColor}`;
+            sentimentLabel.textContent = labelText;
+            sentimentLabel.className = `text-center text-lg font-semibold ${labelColor}`;
 
-        // Update sentiment breakdown bars and percentages
-    ['positive', 'neutral', 'negative'].forEach(sentiment => {
-    const bar = document.getElementById(`${sentiment}`);
-    const percentage = document.getElementById(`${sentiment}Percentage`);
+            // Update sentiment breakdown bars and percentages
+            ['positive', 'neutral', 'negative'].forEach(sentiment => {
+                const bar = document.getElementById(`${sentiment}Bar`);
+                const percentage = document.getElementById(`${sentiment}Percentage`);
 
-    if (bar && percentage) {
-        const percentageValue = processedData[`${sentiment}_percentage`];
-        console.log(percentageValue)
-        // Set the width of the bar based on percentage
-        bar.style.width = `${percentageValue}%`;
+                if (bar && percentage) {
+                    const percentageValue = processedData[`${sentiment}_percentage`];
+                    console.log(percentageValue);
+                    // Set the width of the bar based on percentage
+                    bar.style.width = `${percentageValue}%`;
 
-        // Set the text content of the percentage
-        percentage.textContent = `${percentageValue}%`;
-
-        // Change the color of the bar based on sentiment
-        if (sentiment === 'positive') {
-            bar.style.backgroundColor = 'green';  // Positive sentiment color
-        } else if (sentiment === 'neutral') {
-            bar.style.backgroundColor = 'gray';  // Neutral sentiment color
-        } else if (sentiment === 'negative') {
-            bar.style.backgroundColor = 'red';  // Negative sentiment color
-        }
-    }
-});
-
-
-        // Update recent mentions
-        const mentionsContainer = document.getElementById('recentMentions');
-        if (processedData.recent_mentions.length === 0) {
-            mentionsContainer.innerHTML = `
-                <div class="text-center text-gray-500">
-                    No recent mentions available
-                </div>`;
-        } else {
-            mentionsContainer.innerHTML = processedData.recent_mentions
-                .map(mention => `
-                    <div class="border-l-4 ${
-                        mention.sentiment > 0.5 ? 'border-green-500' :
-                        mention.sentiment < 0.5 ? 'border-red-500' :
-                        'border-yellow-500'
-                    } pl-4 mb-4">
-                        <p class="text-sm font-medium text-gray-900">${mention.text}</p>
-                        <p class="text-sm text-black text-center mt-1">${mention.content}</p>
-                        <p class="text-xs text-gray-400 mt-1">${mention.source} • ${mention.time}</p>
-                    </div>
-                `).join('');
-        }
-    };
-
-    // Set up event listeners for time range buttons
-    document.querySelectorAll('.time-range-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            document.querySelectorAll('.time-range-btn').forEach(btn => {
-                btn.classList.remove('bg-indigo-800');
-            });
-            e.target.classList.add('bg-indigo-800');
-            {#fetchAndUpdateAll();#}
-        });
-    });
-
-
-    const fetchAnalysis = (range) => {
-        loadingOverlay.classList.remove('hidden');  // Show loading
-
-        fetch(`/stocks/${stockCode_}/technical-analysis/`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    // Set the text content of the percentage
+                    percentage.textContent = `${percentageValue}%`;
                 }
-                return response.json();
-            })
-            .then(data => {
-            if (!data) {
-                throw new Error('No data received from the server.');
-            }
-
-            updateTable(data);
-            updatePlots(data);
-            {#console.log(data['sentiment_analysis'])#}
-            if (data['sentiment_analysis'] && Object.keys(data['sentiment_analysis']).length > 0) {
-                processSentimentData(data);
-                updateSentimentUI(data);
-            } else {
-                console.warn('No sentiment analysis data available.');
-            }
-
-            loadingOverlay.classList.add('hidden');  // Hide loading
-    })
-    .catch(error => {
-        console.error('Error:', error.message);
-        loadingOverlay.classList.add('hidden');  // Hide loading on error
-    });
-
-
-    };
-
-    // Set up event listeners for time range buttons
-    document.querySelectorAll('.time-range-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            // Remove active state from all buttons
-            document.querySelectorAll('.time-range-btn').forEach(btn => {
-                btn.classList.remove('bg-indigo-800');
             });
-            // Add active state to clicked button
-            e.target.classList.add('bg-indigo-800');
-            const range = e.target.getAttribute('data-range');
-            fetchAnalysis(range);
+
+            // Update recent mentions
+            const mentionsContainer = document.getElementById('recentMentions');
+
+            if (processedData.recent_mentions.length === 0) {
+                mentionsContainer.innerHTML = `
+                    <div class="text-center text-gray-500">
+                        No recent mentions available
+                    </div>`;
+            } else {
+                mentionsContainer.innerHTML = processedData.recent_mentions
+                    .map(mention => `
+                        <div class="border-l-4 ${
+                            mention.sentiment > 0.5 ? 'border-green-500' :
+                            mention.sentiment < 0.5 ? 'border-red-500' :
+                            'border-yellow-500'
+                        } pl-4 mb-6 p-4 rounded-lg shadow-lg bg-white">
+                            <p class="text-xl font-semibold text-gray-900">${mention.text}</p>
+                            <p class="text-sm text-black mt-2">${mention.content}</p>
+                            <p class="text-xs text-gray-400 mt-2">${mention.source} • ${mention.time}</p>
+                            <a href="${mention.link}" class="text-sm text-blue-500 mt-2 block hover:text-blue-700" target="_blank">
+                                Read more
+                            </a>
+                        </div>
+                    `).join('');
+            }
+        };
+
+        const fetchAnalysis = (range) => {
+            loadingOverlay.classList.remove('hidden');  // Show loading
+
+            fetch(`/stocks/${stockCode_}/technical-analysis/`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data) {
+                        throw new Error('No data received from the server.');
+                    }
+
+                    updateTable(data);
+                    updatePlots(data);
+                    if (data['sentiment_analysis'] && Object.keys(data['sentiment_analysis']).length > 0) {
+                        processSentimentData(data);
+                        updateSentimentUI(data);
+                    } else {
+                        console.warn('No sentiment analysis data available.');
+                    }
+
+                    loadingOverlay.classList.add('hidden');  // Hide loading
+                })
+                .catch(error => {
+                    console.error('Error:', error.message);
+                    loadingOverlay.classList.add('hidden');  // Hide loading on error
+                });
+        };
+
+        // Set up event listeners for time range buttons
+        document.querySelectorAll('.time-range-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                // Remove active state from all buttons
+                document.querySelectorAll('.time-range-btn').forEach(btn => {
+                    btn.classList.remove('bg-indigo-800');
+                });
+                // Add active state to clicked button
+                e.target.classList.add('bg-indigo-800');
+                const range = e.target.getAttribute('data-range');
+                fetchAnalysis(range);
+            });
         });
+        fetchAnalysis();
     });
-    fetchAnalysis();
-});
 </script>
     <style>
         th{
@@ -617,6 +597,39 @@ document.addEventListener('DOMContentLoaded', () => {
             overflow-y: auto;
         }
 
+        #recentMentions {
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 10px;
+        }
+
+        #recentMentions .border-l-4 {
+            border-width: 1px;
+            padding-left: 16px;
+        }
+
+        #recentMentions p {
+            margin-bottom: 8px;
+        }
+
+        #recentMentions a {
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        #recentMentions a:hover {
+            color: #2563eb; /* Darker blue on hover */
+        }
+
+        #recentMentions .shadow-lg {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #recentMentions .rounded-lg {
+            border-radius: 8px;
+        }
+
+
     </style>
 {% endblock %}
-
