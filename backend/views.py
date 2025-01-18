@@ -102,18 +102,20 @@ def historical_data(request, code):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
 
-    if start_date and end_date:
-        df['Date'] = pd.to_datetime(df['Date'])
-        filtered_df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
-        filtered_df['Date'] = pd.to_datetime(filtered_df['Date']).dt.strftime('%d.%m.%Y')
-    else:
-        df['Date'] = pd.to_datetime(df['Date'])
-        current_date = datetime.now()
-        one_month_ago = current_date - timedelta(days=30)  # Adjust for exact one-month calculation if needed
+    df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
 
-        # Filter the DataFrame
-        filtered_df = df[(df['Date'] >= one_month_ago) & (df['Date'] <= current_date)]
-        filtered_df['Date'] = pd.to_datetime(filtered_df['Date']).dt.strftime('%d.%m.%Y')
+    if start_date and end_date:
+        start_date = pd.to_datetime(start_date)  
+        end_date = pd.to_datetime(end_date)  
+
+        filtered_df = df.loc[(df['Date'] >= start_date) & (df['Date'] <= end_date)].copy()
+        filtered_df['Date'] = filtered_df['Date'].dt.strftime('%d.%m.%Y')
+    else:
+        current_date = datetime.now()
+        one_month_ago = current_date - timedelta(days=30)
+
+        filtered_df = df.loc[(df['Date'] >= one_month_ago) & (df['Date'] <= current_date)].copy()
+        filtered_df['Date'] = filtered_df['Date'].dt.strftime('%d.%m.%Y')
 
     stock = get_object_or_404(Stock, code=code)
 
