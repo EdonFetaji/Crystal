@@ -1,118 +1,132 @@
 {% extends 'base.html' %}
 {% block content %}
     <div class="min-h-screen bg-gray-900 py-12">
-
         <h1 class="text-5xl font-extrabold text-center text-white tracking-tight mb-4">
-    <span class="block uppercase bg-clip-text text-transparent bg-gradient-to-r from-gray-300 to-gray-100">
-        Predictions For
-    </span>
+        <span class="block uppercase bg-clip-text text-transparent bg-gradient-to-r from-gray-300 to-gray-100">
+            Predictions For
+        </span>
         </h1>
         <h2 class="text-6xl font-black text-center text-blue-200 tracking-wider">
             {{ code }}
         </h2>
-        {#        <h2 class="text-3xl font-black text-center text-blue-400 italic bg-gray-900 tracking-wider">#}
-        {#            {{ code }}#}
-        {#        </h2>#}
-        <br>
-        <br>
+        <br><br>
 
         <!-- Main Container -->
         <div class="max-w-7xl mx-auto px-4">
-            <!-- Stock Code Header -->
-
-
             <!-- Navigation Circles -->
-            <div class="flex justify-center mt-4 space-x-4">
-                {% with ''|center:5 as range %}
-                    {% for i in range %}
-                        <button class="dot w-12 h-12 flex justify-center items-center rounded-full bg-gray-600 text-white font-bold text-lg focus:outline-none transition-all duration-300"
-                                data-index="{{ forloop.counter0 }}">
-                            {{ forloop.counter }}d
-                        </button>
-                    {% endfor %}
-                {% endwith %}
+            <div id="navigation-dots" class="flex justify-center mt-4 space-x-4">
+                {% for date, price in predictions.items %}
+                    <button class="dot w-12 h-12 flex justify-center items-center rounded-full bg-gray-600 text-white font-bold text-lg focus:outline-none transition-all duration-300"
+                            data-index="{{ forloop.counter0 }}">
+                        {{ forloop.counter }}
+                    </button>
+                {% endfor %}
             </div>
 
-            <br>
-            <br>
-            <br>
+            <br><br><br>
 
             <!-- Full Page Transition Controlled by Circles -->
             <div class="rounded-xl shadow-2xl p-6 mb-8 relative overflow-hidden">
                 <!-- Prediction Slide -->
                 <div class="prediction-slide bg-gray-700 rounded-lg p-6">
                     <div class="text-center">
-                        <h3 class="text-2xl font-bold text-white mb-2 prediction-date"></h3>
+                        <h3 id="prediction-date" class="text-2xl font-bold text-white mb-2"></h3>
                         <div class="flex justify-center items-center space-x-4">
                             <div class="text-center">
                                 <p class="text-gray-400 text-sm">Predicted Price</p>
-                                <p class="text-3xl font-bold text-green-400">$<span class="prediction-price">0</span>
-                                </p>
+                                <p id="prediction-price" class="text-3xl font-bold text-green-400"></p>
                             </div>
-                            <div class="text-center" style="">
-                                <p class="text-gray-400 text-sm">Confidence</p>
-                                <p class="text-xl font-semibold text-blue-400">0%</p>
+                            <div class="text-center">
+                                <p id="confidence" class="text-xl font-semibold text-blue-400"></p>
                             </div>
-
                         </div>
                     </div>
+
+                    <br>
+                    <div id="container_for_plot">
+
+                    </div>
+
+
                 </div>
             </div>
 
 
         </div>
+
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const dots = document.querySelectorAll('.dot');
-            const predictionDate = document.querySelector('.prediction-date');
-            const predictionPrice = document.querySelector('.prediction-price');
-            const confidence = document.querySelector('.text-blue-400');
+            const predictionDate = document.getElementById('prediction-date');
+            const predictionPrice = document.getElementById('prediction-price');
+            const confidence = document.getElementById('confidence');
 
-            // Generate dates for prediction
-            const dates = [];
+            const data = {{ predictions|safe }};
+            const dates = Object.keys(data);
+            const prices = Object.values(data);
 
-            {#for (const [date, price] of Object.entries(data.predictions)) {#}
-            {#    console.log(`Date: ${date}, Price: ${price}`);4#}
-            {##}
-            {#    date.setDate()#}
-            {#}#}
 
-            for (let i = 1; i <= 5; i++) {
-                const date = new Date();
-                date.setDate(date.getDate() + i);
-                dates.push(date.toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    month: 'short',
-                    day: 'numeric'
-                }));
-            }
-
-            // Initial data
             let currentIndex = 0;
             updateSlide(currentIndex);
 
             function updateSlide(index) {
-                // Update prediction date
                 predictionDate.textContent = dates[index];
-                // Update prediction price and confidence
+                predictionPrice.textContent = `${prices[index].toFixed(3)} den`;
 
-                predictionPrice.textContent = (index + 1) * 100; // Example data
-                confidence.textContent = `${95 - index * 5}% accuracy`; // Example confidence
-                // Update dot colors
                 dots.forEach(dot => dot.classList.remove('bg-blue-500'));
                 dots[index].classList.add('bg-blue-500');
             }
 
-            // Add click event to dots
             dots.forEach((dot, index) => {
                 dot.addEventListener('click', () => {
                     currentIndex = index;
                     updateSlide(index);
                 });
             });
+            const priceLayout = {
+                title: {
+                    text: 'PRICE Trend',
+                    font: {size: 24, color: '#1F2937'}
+                },
+                xaxis: {
+                    title: 'Time Period',
+                    gridcolor: '#E5E7EB'
+                },
+                yaxis: {
+                    title: 'PRICE Value in DEN',
+                    gridcolor: '#E5E7EB'
+                },
+                paper_bgcolor: 'white',
+                plot_bgcolor: 'white',
+                showlegend: true,
+                legend: {
+                    x: 0,
+                    y: 1.1,
+                    orientation: 'h'
+                },
+                margin: {t: 50, l: 50, r: 20, b: 50}
+            };
+
+            const priceData = [
+                {
+                    x: dates,
+                    y: prices,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Price movement',
+                    line: {color: '#60A5FA'}
+                }
+            ];
+
+            Plotly.newPlot('container_for_plot', priceData, priceLayout,
+                {responsive: true, width: 200, height: 400});
+
+
         });
+
+
     </script>
 
     <style>
@@ -123,7 +137,7 @@
         }
 
         .dot.bg-blue-500 {
-            background-color: #2563eb; /* Blue color for active dot */
+            background-color: #2563eb;
         }
 
         .prediction-slide {

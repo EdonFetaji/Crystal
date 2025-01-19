@@ -326,22 +326,24 @@ def populate_stocks(request):
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
+import requests
+from django.shortcuts import render
+
+
 def predictions(request, code):
+    e = f'http://localhost:8002/stock/{code}/predict/5'
+    response = requests.get(e)
 
+    if response.status_code == 200:
+        data = response.json()  # Parse JSON data from the response
+    else:
+        data = {'predictions': {}, 'error': 'Unable to fetch predictions'}
 
-    ml_module_url = 'http://ml_module:8000'
-    endpoint = f"{ml_module_url}/stock/ALK/predict/1"
-    response = requests.get(endpoint)
-
-    print(response.json())
-
-    return render(request, 'backend/predictions.html', {'code': code})
+    return render(request, 'backend/predictions.html', {'code': code, 'predictions': data['predictions']})
 
 
 def predictions_base(request):
-
     query = request.GET.get('stock_code')
     stocks = Stock.objects.all()
-
 
     return render(request, 'backend/predictions_base.html', {'stocks': stocks})

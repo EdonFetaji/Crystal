@@ -1,8 +1,8 @@
 import os
 import requests
 
-ml_module_url = os.getenv('ML_MODULE_URL')
-endpoint = f"{ml_module_url}/stock/ALK/predict/1"
-response = requests.get(endpoint)
+ml_module_url = 'http:/ml_module:8000'
+e = 'http://localhost:8002/stock/STB/predict/5'
+response = requests.get(e)
 
 print(response.json())
