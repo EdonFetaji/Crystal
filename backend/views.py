@@ -18,6 +18,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 from utils.WassabiClient import get_wassabi_client, WasabiClient
 from django.contrib.auth.decorators import login_required
 from concurrent.futures import ThreadPoolExecutor
+import os
+import requests
 
 CloudClient: WasabiClient = get_wassabi_client()
 
@@ -242,35 +244,45 @@ def technical_analysis(request, code):
 
             indicators = {
                 'rsi': StockTechnicalAnalyzer.calculate_RSI_indicator(close_prices, window_size),
-                'Stochastic_Oscillator': StockTechnicalAnalyzer.calculate_Stochastic_Oscillator_indicator(close_prices, high_prices, low_prices, window_size),
+                'Stochastic_Oscillator': StockTechnicalAnalyzer.calculate_Stochastic_Oscillator_indicator(close_prices,
+                                                                                                          high_prices,
+                                                                                                          low_prices,
+                                                                                                          window_size),
                 'MACD': StockTechnicalAnalyzer.calculate_MACD_indicator(close_prices),
-                'CCI': StockTechnicalAnalyzer.calculate_CCI_indicator(high_prices, low_prices, close_prices, window_size),
-                'Chaikin_Oscillator': StockTechnicalAnalyzer.calculate_Chaikin_money_flow(close_prices, high_prices, low_prices, volume_data, window_size),
+                'CCI': StockTechnicalAnalyzer.calculate_CCI_indicator(high_prices, low_prices, close_prices,
+                                                                      window_size),
+                'Chaikin_Oscillator': StockTechnicalAnalyzer.calculate_Chaikin_money_flow(close_prices, high_prices,
+                                                                                          low_prices, volume_data,
+                                                                                          window_size),
                 'EMA': StockTechnicalAnalyzer.calculate_EMA_indicator(close_prices, window_size),
                 'SMA': StockTechnicalAnalyzer.calculate_SMA_indicator(close_prices, window_size),
                 'WMA': StockTechnicalAnalyzer.calculate_WMA_indicator(close_prices),
                 'KAMA': StockTechnicalAnalyzer.calculate_Kama_indicator(close_prices, window_size + 1),
                 'OBV': StockTechnicalAnalyzer.calculate_OBV_indicator(close_prices, volume_data),
-                'Bollinger_upper_band': StockTechnicalAnalyzer.calculate_Bollinger_upper_band(close_prices, window_size),
-                'Bollinger_lower_band': StockTechnicalAnalyzer.calculate_Bollinger_lower_band(close_prices, window_size),
-                'Bollinger_middle_band': StockTechnicalAnalyzer.calculate_Bollinger_middle_band(close_prices, window_size),
+                'Bollinger_upper_band': StockTechnicalAnalyzer.calculate_Bollinger_upper_band(close_prices,
+                                                                                              window_size),
+                'Bollinger_lower_band': StockTechnicalAnalyzer.calculate_Bollinger_lower_band(close_prices,
+                                                                                              window_size),
+                'Bollinger_middle_band': StockTechnicalAnalyzer.calculate_Bollinger_middle_band(close_prices,
+                                                                                                window_size),
                 'VMA': StockTechnicalAnalyzer.calculate_VMA_indicator(close_prices, volume_data),
                 'date': data['Date']
             }
 
             rsi = indicators['rsi'].iloc[-1] if not indicators['rsi'].isna().all() else None
-            bollinger_upper = indicators['Bollinger_upper_band'].iloc[-1] if not indicators['Bollinger_upper_band'].isna().all() else None
-            bollinger_lower = indicators['Bollinger_lower_band'].iloc[-1] if not indicators['Bollinger_lower_band'].isna().all() else None
+            bollinger_upper = indicators['Bollinger_upper_band'].iloc[-1] if not indicators[
+                'Bollinger_upper_band'].isna().all() else None
+            bollinger_lower = indicators['Bollinger_lower_band'].iloc[-1] if not indicators[
+                'Bollinger_lower_band'].isna().all() else None
             close_price = close_prices.iloc[-1]
 
             signal = StockTechnicalAnalyzer.determine_signal(rsi, bollinger_upper, bollinger_lower, close_price)
 
-            response[range_label] = {key: value.dropna().tolist() if not value.dropna().empty else 'N/A' for key, value in indicators.items()}
+            response[range_label] = {key: value.dropna().tolist() if not value.dropna().empty else 'N/A' for key, value
+                                     in indicators.items()}
             response[range_label]['signal'] = signal
 
-
         sentiment_df = CloudClient.READ_ARTICLES(str(code))
-
 
         return JsonResponse({
             'analysis': response if response is not None else {},
@@ -312,3 +324,24 @@ def populate_stocks(request):
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+
+def predictions(request, code):
+
+
+    ml_module_url = 'http://ml_module:8000'
+    endpoint = f"{ml_module_url}/stock/ALK/predict/1"
+    response = requests.get(endpoint)
+
+    print(response.json())
+
+    return render(request, 'backend/predictions.html', {'code': code})
+
+
+def predictions_base(request):
+
+    query = request.GET.get('stock_code')
+    stocks = Stock.objects.all()
+
+
+    return render(request, 'backend/predictions_base.html', {'stocks': stocks})

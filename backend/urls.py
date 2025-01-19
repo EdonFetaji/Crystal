@@ -10,14 +10,18 @@ from .views import (
     profile,
     add_to_watchlist_from_profile,
     historical_data,
-    sentiment_analysis
+    sentiment_analysis,
+    predictions,
+    predictions_base,
 )
 
 urlpatterns = [
     path('', home, name='home'),
     path('stocks/', stock_list, name='stock_list'),
+    path('stocks/predictions_base/', predictions_base, name='predictions_base'),  # Moved above stock_detail
     path('stocks/<str:code>/', stock_detail, name='stock_detail'),
     path('stocks/historical_data/<str:code>/', historical_data, name='historical_data'),
+    path('stocks/predictions/<str:code>/', predictions, name='predictions'),
     path('stocks/<str:code>/technical-analysis/', technical_analysis, name='technical_analysis'),
     path('stocks/<str:code>/sentiment-analysis/', sentiment_analysis, name='sentiment_analysis'),
     path('watchlist/', watchlist, name='watchlist'),

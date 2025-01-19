@@ -1,219 +1,263 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-12 bg-gray-800 relative">
-<a href="{% url 'historical_data' stock.code %}"
-   class="absolute top-1 right-2 bg-blue-500 hover:bg-blue-700 text-white font-semibold py-1 px-3 rounded shadow-md hover:shadow-lg transition-all duration-300">
-    See Historical Data!
-</a>
-{#    <a href="{% url 'stock_detail' stock.code %}" class="group-hover:scale-125 transform duration-300 ease-in-out"></a>#}
+    <div class="min-h-screen bg-gray-50 py-12 bg-gray-800 relative">
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Header Section -->
-        <div class="text-center mb-12">
+        {#    <a href="{% url 'stock_detail' stock.code %}" class="group-hover:scale-125 transform duration-300 ease-in-out"></a>#}
 
-            <h1 class="text-4xl font-extrabold text-gray-400 sm:text-5xl md:text-6xl">
-                Stock Analysis for:
-                <span id="stock_code" style="color: blanchedalmond">{{ stock.code }}</span>
-            </h1>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Header Section -->
 
-            <p class="mt-4 text-xl text-gray-500">Comprehensive technical analysis and market insights</p>
-        </div>
+            <div class="text-center mb-12">
+                <div class="flex flex-col lg:flex-row lg:justify-center lg:items-center space-y-6 lg:space-y-0 lg:space-x-6">
+                    <!-- H1 Text -->
+                    <h1 class="text-4xl font-extrabold text-gray-400 sm:text-5xl md:text-6xl">
+                        Stock Analysis for:
+                        <span id="stock_code" class="text-blanchedalmond">{{ stock.code }}</span>
+                    </h1>
 
-        <!-- Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-            <div id="loading-overlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-            <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-black-500"></div>
-        </div>
-    <!-- MACD Chart Card -->
-    <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
-        <div class="px-6 py-4 bg-gray-400">
-            <h2 class="text-2xl font-extrabold text-blanchedalmond">MACD Analysis</h2>
-            <p class="text-gray-300 font-bold font-bold text-gray-800">Moving Average Convergence Divergence</p>
-        </div>
-        <div class="p-6 bg-gray-300">
-            <div id="macdChart" class="w-full h-[400px]"></div>
-        </div>
-    </div>
-
-    <!-- OBV Chart Card -->
-    <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
-        <div class="px-6 py-4 bg-gray-400">
-            <h2 class="text-2xl font-extrabold text-blanchedalmond">Volume Analysis</h2>
-            <p class="text-gray-300 font-bold text-gray-800">On-Balance Volume Indicator</p>
-        </div>
-        <div class="p-6 bg-gray-300">
-            <div id="obvChart" class="w-full h-[400px]"></div>
-        </div>
-    </div>
-</div>
-
-
-        <!-- Technical Analysis Table -->
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div class="px-6 py-4 bg-gray-700">
-                <h2 class="text-2xl font-bold text-white">Technical Indicators</h2>
-            </div>
-            <div class="p-6 overflow-x-auto bg-gray-200">
-                <div class="text-black font-extrabold">OSCILLATORS</div> <br>
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead>
-                        <tr>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Range</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RSI - Relative Strength Index</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bollinger Bands</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CCI - Commodity Channel Index</th>
-                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Signal</th>
-                        </tr>
-                    </thead>
-                    <tbody id="oscilators" class="bg-white divide-y divide-gray-200">
-                        <tr>
-                            <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Loading data...</td>
-                        </tr>
-                    </tbody>
-
-                </table>
-
-                <br>
-
-                <div class="text-black font-extrabold">MOVING AVERAGES</div> <br>
-
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead>
-                         <tr>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Range</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SMA - Simple Moving Average</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EMA - Exponential Moving Average</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WMA - Weighted Moving Average</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">KAMA - Kaufman's Adaptive Moving Average</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">VMA - Variable Moving Average</th>
-                                <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Signal</th>
-                        </tr>
-                    </thead>
-                    <tbody id="moving_averages" class="bg-white divide-y divide-gray-200">
-                        <tr>
-                            <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Loading data...</td>
-                        </tr>
-                    </tbody>
-
-                </table>
-            </div>
-        </div>
-    </div>
-
-<div>
-    Price plot of {{ stock.code }}:
-    <div class="p-6 bg-gray-800">
-            <div id='priceplot' class="w-full h-[400px]"></div>
-        </div>
-</div>
-
-<div style="color: whitesmoke">Sentiment analysis:</div>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
-    <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
-        <div class="px-6 py-4 bg-gray-700">
-            <h2 class="text-2xl font-bold text-white">Sentiment Analysis</h2>
-            <p class="text-gray-300 mt-1">Market sentiment and social media analysis</p>
-        </div>
-
-        <div class="p-6 bg-gray-200">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Overall Sentiment Card -->
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Overall Sentiment</h3>
-                    <div id="sentimentScore" class="text-4xl font-extrabold text-center my-4">
-                        <!-- Will be populated by JS -->
-                        <div class="animate-pulse bg-gray-200 h-12 w-24 mx-auto rounded"></div>
+                    <!-- Buttons -->
+                    <div class="flex flex-col space-y-4 lg:space-y-2 lg:ml-4">
+                        <a class="bg-gray-100 hover:bg-gray-600 text-black font-bold py-2 px-4 rounded transition-colors duration-300"
+                           href="{% url 'historical_data' stock.code %}">
+                            See Historical Data!
+                        </a>
+                        <a class="bg-gray-100 hover:bg-gray-600 text-black font-bold py-2 px-4 rounded transition-colors duration-300"
+                           href="{% url 'predictions' stock.code %}">
+                            See Predictions!
+                        </a>
                     </div>
-                    <div id="sentimentLabel" class="text-center text-lg font-semibold">
-                        <!-- Will be populated by JS -->
-                        <div class="animate-pulse bg-gray-200 h-6 w-32 mx-auto rounded"></div>
+                </div>
+            </div>
+
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+                <div id="loading-overlay"
+                     class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-black-500"></div>
+                </div>
+                <!-- MACD Chart Card -->
+                <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+                    <div class="px-6 py-4 bg-gray-400">
+                        <h2 class="text-2xl font-extrabold text-blanchedalmond">MACD Analysis</h2>
+                        <p class="text-gray-300 font-bold font-bold text-gray-800">Moving Average Convergence
+                            Divergence</p>
+                    </div>
+                    <div class="p-6 bg-gray-300">
+                        <div id="macdChart" class="w-full h-[400px]"></div>
                     </div>
                 </div>
 
-                <!-- Sentiment Breakdown -->
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Sentiment Breakdown</h3>
-                    <div class="space-y-4">
-                        <div class="relative pt-1">
-                            <div class="flex items-center justify-between">
-                                <div>
+                <!-- OBV Chart Card -->
+                <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+                    <div class="px-6 py-4 bg-gray-400">
+                        <h2 class="text-2xl font-extrabold text-blanchedalmond">Volume Analysis</h2>
+                        <p class="text-gray-300 font-bold text-gray-800">On-Balance Volume Indicator</p>
+                    </div>
+                    <div class="p-6 bg-gray-300">
+                        <div id="obvChart" class="w-full h-[400px]"></div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Technical Analysis Table -->
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div class="px-6 py-4 bg-gray-700">
+                    <h2 class="text-2xl font-bold text-white">Technical Indicators</h2>
+                </div>
+                <div class="p-6 overflow-x-auto bg-gray-200">
+                    <div class="text-black font-extrabold">OSCILLATORS</div>
+                    <br>
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                        <tr>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Time Range
+                            </th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                RSI - Relative Strength Index
+                            </th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Bollinger Bands
+                            </th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                CCI - Commodity Channel Index
+                            </th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Signal
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody id="oscilators" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Loading data...</td>
+                        </tr>
+                        </tbody>
+
+                    </table>
+
+                    <br>
+
+                    <div class="text-black font-extrabold">MOVING AVERAGES</div>
+                    <br>
+
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                        <tr>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Time Range
+                            </th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                SMA - Simple Moving Average
+                            </th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                EMA - Exponential Moving Average
+                            </th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                WMA - Weighted Moving Average
+                            </th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                KAMA - Kaufman's Adaptive Moving Average
+                            </th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                VMA - Variable Moving Average
+                            </th>
+                            <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Signal
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody id="moving_averages" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">Loading data...</td>
+                        </tr>
+                        </tbody>
+
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            Price plot of {{ stock.code }}:
+            <div class="p-6 bg-gray-800">
+                <div id='priceplot' class="w-full h-[400px]"></div>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12">
+            <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+                <div class="px-6 py-4 bg-gray-700">
+                    <h2 class="text-2xl font-bold text-white">Sentiment Analysis</h2>
+                    <p class="text-gray-300 mt-1">Market sentiment and social media analysis</p>
+                </div>
+
+                <div class="p-6 bg-gray-200">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Overall Sentiment Card -->
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Overall Sentiment</h3>
+                            <div id="sentimentScore" class="text-4xl font-extrabold text-center my-4">
+                                <!-- Will be populated by JS -->
+                                <div class="animate-pulse bg-gray-200 h-12 w-24 mx-auto rounded"></div>
+                            </div>
+                            <div id="sentimentLabel" class="text-center text-lg font-semibold">
+                                <!-- Will be populated by JS -->
+                                <div class="animate-pulse bg-gray-200 h-6 w-32 mx-auto rounded"></div>
+                            </div>
+                        </div>
+
+                        <!-- Sentiment Breakdown -->
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <h3 class="text-lg font-bold text-gray-900 mb-4">Sentiment Breakdown</h3>
+                            <div class="space-y-4">
+                                <div class="relative pt-1">
+                                    <div class="flex items-center justify-between">
+                                        <div>
                                     <span class="text-xs font-semibold inline-block text-green-600">
                                         Positive
                                     </span>
+                                        </div>
+                                        <div id="positivePercentage"
+                                             class="text-xs font-semibold inline-block text-green-600">
+                                            <!-- Will be populated by JS -->
+                                        </div>
+                                    </div>
+                                    <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
+                                        <div id="positiveBar" style="width:0%"
+                                             class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500 transition-all duration-500"></div>
+                                    </div>
                                 </div>
-                                <div id="positivePercentage" class="text-xs font-semibold inline-block text-green-600">
-                                    <!-- Will be populated by JS -->
-                                </div>
-                            </div>
-                            <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
-                                <div id="positiveBar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500 transition-all duration-500"></div>
-                            </div>
-                        </div>
-                        <div class="relative pt-1">
-                            <div class="flex items-center justify-between">
-                                <div>
+                                <div class="relative pt-1">
+                                    <div class="flex items-center justify-between">
+                                        <div>
                                     <span class="text-xs font-semibold inline-block text-yellow-600">
                                         Neutral
                                     </span>
+                                        </div>
+                                        <div id="neutralPercentage"
+                                             class="text-xs font-semibold inline-block text-yellow-600">
+                                            <!-- Will be populated by JS -->
+                                        </div>
+                                    </div>
+                                    <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-yellow-200">
+                                        <div id="neutralBar" style="width:0%"
+                                             class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-yellow-500 transition-all duration-500"></div>
+                                    </div>
                                 </div>
-                                <div id="neutralPercentage" class="text-xs font-semibold inline-block text-yellow-600">
-                                    <!-- Will be populated by JS -->
-                                </div>
-                            </div>
-                            <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-yellow-200">
-                                <div id="neutralBar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-yellow-500 transition-all duration-500"></div>
-                            </div>
-                        </div>
-                        <div class="relative pt-1">
-                            <div class="flex items-center justify-between">
-                                <div>
+                                <div class="relative pt-1">
+                                    <div class="flex items-center justify-between">
+                                        <div>
                                     <span class="text-xs font-semibold inline-block text-red-600">
                                         Negative
                                     </span>
+                                        </div>
+                                        <div id="negativePercentage"
+                                             class="text-xs font-semibold inline-block text-red-600">
+                                            <!-- Will be populated by JS -->
+                                        </div>
+                                    </div>
+                                    <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-red-200">
+                                        <div id="negativeBar" style="width:0%"
+                                             class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-red-500 transition-all duration-500"></div>
+                                    </div>
                                 </div>
-                                <div id="negativePercentage" class="text-xs font-semibold inline-block text-red-600">
-                                    <!-- Will be populated by JS -->
-                                </div>
-                            </div>
-                            <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-red-200">
-                                <div id="negativeBar" style="width:0%" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-red-500 transition-all duration-500"></div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Recent Mentions -->
-                <div class="bg-white rounded-xl shadow-md p-6">
-                    <h3 class="text-lg font-bold text-gray-900 mb-4">Recent Mentions</h3>
-                    <div id="recentMentions" class="space-y-4">
-                        <!-- Will be populated by JS -->
-                        <div class="animate-pulse space-y-3">
-                            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                            <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-                            <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                        <!-- Recent Mentions -->
+                        <div class="bg-white rounded-xl shadow-md p-6">
+                            <h3 class="text-lg font-bold text-gray-900 mb-4">Recent Mentions</h3>
+                            <div id="recentMentions" class="space-y-4">
+                                <!-- Will be populated by JS -->
+                                <div class="animate-pulse space-y-3">
+                                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                                    <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                                    <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-</div>
 
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
 
-    const updateTable = (data) => {
-        console.log({{ data.analysis }})
+            const updateTable = (data) => {
+                console.log({{ data.analysis }})
 
-        const tbody = document.getElementById('oscilators');
-        tbody.innerHTML = '';
+                const tbody = document.getElementById('oscilators');
+                tbody.innerHTML = '';
 
-        for (const [range, metrics] of Object.entries(data.analysis)) {
-            const signal = metrics.signal || 'N/A';
+                for (const [range, metrics] of Object.entries(data.analysis)) {
+                    const signal = metrics.signal || 'N/A';
 
-            const row = `
+                    const row = `
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         ${range.toUpperCase()}
@@ -239,16 +283,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     {#    ${parseFloat(metrics.Chaikin_Oscillator).toFixed(2) || 'N/A'}#}
                     {#</td>#}
                 </tr>`;
-            tbody.insertAdjacentHTML('beforeend', row);
-        }
+                    tbody.insertAdjacentHTML('beforeend', row);
+                }
 
-        const tbody2 = document.getElementById("moving_averages")
-        tbody2.innerHTML = ''
+                const tbody2 = document.getElementById("moving_averages")
+                tbody2.innerHTML = ''
 
-        for (const [range, metrics] of Object.entries(data.analysis)) {
-            const signal = metrics.signal || 'N/A'; // Fetch the signal value
+                for (const [range, metrics] of Object.entries(data.analysis)) {
+                    const signal = metrics.signal || 'N/A'; // Fetch the signal value
 
-            const row = `
+                    const row = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         ${range.toUpperCase()}
                     </td>
@@ -275,259 +319,257 @@ document.addEventListener('DOMContentLoaded', () => {
                     </td>
 
                     `
-            ;
-            tbody2.insertAdjacentHTML('beforeend', row);
-        }
-
-    };
-
-
-    const updatePlots = (data) => {
-
-        const obvLayout = {
-            title: {
-                text: 'On-Balance Volume Trend',
-                font: { size: 24, color: '#1F2937' }
-            },
-            xaxis: {
-                title: 'Time Period',
-                gridcolor: '#E5E7EB'
-            },
-            yaxis: {
-                title: 'OBV Value',
-                gridcolor: '#E5E7EB'
-            },
-            paper_bgcolor: 'white',
-            plot_bgcolor: 'white',
-            showlegend: true,
-            legend: {
-                x: 0,
-                y: 1.1,
-                orientation: 'h'
-            },
-            margin: { t: 50, l: 50, r: 20, b: 50 }
-        };
-
-
-
-        const obvData = [
-            {
-                x: data['analysis']['1d']['date'],
-                y: data['analysis']['1d']['OBV'],
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: '1 Day',
-                line: { color: '#60A5FA' }
-            },
-            {
-                x: data['analysis']['1w']['date'],
-                y: data['analysis']['1w']['OBV'],
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: '1 Week',
-                line: { color: '#2563EB' }
-            },
-            {
-                x: data['analysis']['1m']['date'],
-                y: data['analysis']['1m']['OBV'],
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: '1 Month',
-                line: { color: '#1E40AF' }
-            }
-        ];
-
-        const macdLayout = {
-            title: {
-                text: 'MACD Trend',
-                font: { size: 24, color: '#1F2937' }
-            },
-            xaxis: {
-                title: 'Time Period',
-                gridcolor: '#E5E7EB'
-            },
-            yaxis: {
-                title: 'MACD Value',
-                gridcolor: '#E5E7EB'
-            },
-            paper_bgcolor: 'white',
-            plot_bgcolor: 'white',
-            showlegend: true,
-            legend: {
-                x: 0,
-                y: 1.1,
-                orientation: 'h'
-            },
-            margin: { t: 50, l: 50, r: 20, b: 50 }
-        };
-
-        const macdData = [
-            {
-                x: data['analysis']['1d']['date'],
-                y: data['analysis']['1d']['MACD'],
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: '1 Day',
-                line: { color: '#60A5FA' }
-            },
-            {
-                x: data['analysis']['1w']['date'],
-                y: data['analysis']['1w']['MACD'],
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: '1 Week',
-                line: { color: '#2563EB' }
-            },
-            {
-                x: data['analysis']['1m']['date'],
-                y: data['analysis']['1m']['MACD'],
-                type: 'scatter',
-                mode: 'lines',
-                name: '1 Month',
-                line: { color: '#1E40AF' }
-            }
-        ];
-
-
-
-        const priceLayout = {
-            title: {
-                text: 'PRICE Trend',
-                font: { size: 24, color: '#1F2937' }
-            },
-            xaxis: {
-                title: 'Time Period',
-                gridcolor: '#E5E7EB'
-            },
-            yaxis: {
-                title: 'PRICE Value in DEN',
-                gridcolor: '#E5E7EB'
-            },
-            paper_bgcolor: 'white',
-            plot_bgcolor: 'white',
-            showlegend: true,
-            legend: {
-                x: 0,
-                y: 1.1,
-                orientation: 'h'
-            },
-            margin: { t: 50, l: 50, r: 20, b: 50 }
-        };
-
-        const x_ = data['historical_data'].map(item => item.Date);
-        const y_ = data['historical_data'].map(item => item['Last trade price']);
-
-
-        const priceData = [
-            {
-                x: [...x_].reverse(),
-                y: [...y_].reverse(),
-                type: 'scatter',
-                mode: 'lines+markers',
-                name: 'Price movement',
-                line: { color: '#60A5FA' }
-            }
-        ];
-
-
-        Plotly.newPlot('macdChart', macdData, macdLayout, { responsive: true });
-        Plotly.newPlot('obvChart', obvData, obvLayout, { responsive: true });
-        Plotly.newPlot('priceplot', priceData, priceLayout, { responsive: true });
-    };
-
-    const stockCode_ = document.getElementById('stock_code').textContent;
-    const loadingOverlay = document.getElementById('loading-overlay');
-
-    {##}
-
-    const processSentimentData = (data) => {
-        // Check if sentiment data exists and has entries
-        if (!data['sentiment_analysis'] || !data['sentiment_analysis'].length) {
-            return {
-                overall_score: 0.5,
-                positive_percentage: "0.0",
-                neutral_percentage: "100.0",
-                negative_percentage: "0.0",
-                recent_mentions: []
-            };
-        }
-
-        const sentiments = data['sentiment_analysis'].flatMap(item =>
-            item['sentiment'].split(', '));
-
-        const total = sentiments.length || 1; // Prevent division by zero
-        const sentimentCounts = {
-            Positive: sentiments.filter(s => s === 'Positive').length,
-            Neutral: sentiments.filter(s => s === 'Neutral').length,
-            Negative: sentiments.filter(s => s === 'Negative').length
-        };
-
-        return {
-            overall_score: (sentimentCounts.Positive + sentimentCounts.Neutral * 0.5) / total,
-            positive_percentage: ((sentimentCounts.Positive / total) * 100).toFixed(1),
-            neutral_percentage: ((sentimentCounts.Neutral / total) * 100).toFixed(1),
-            negative_percentage: ((sentimentCounts.Negative / total) * 100).toFixed(1),
-            recent_mentions: data['sentiment_analysis'].slice(0, 5).map(article => ({
-                text: article.title || 'No Title',
-                sentiment: article['sentiment'].split(', ')
-                    .filter(s => s === 'Positive').length /
-                    article['sentiment'].split(', ').length,
-                source: new URL(article.link).hostname,
-                time: article.date,
-                content: (article.content || 'No content available').substring(100, 200) + '...',
-                link: article.link
-            }))
-        };
-    };
-
-    const updateSentimentUI = (data) => {
-            const processedData = processSentimentData(data);
-
-            // Update overall sentiment score
-            const sentimentScoreDiv = document.getElementById('sentimentScore');
-            sentimentScoreDiv.innerHTML = `${(processedData.overall_score * 100).toFixed(1)}%`;
-
-            const sentimentLabel = document.getElementById('sentimentLabel');
-            const { labelText, labelColor } = processedData.overall_score >= 0.6
-                ? { labelText: 'Bullish', labelColor: 'text-green-600' }
-                : processedData.overall_score <= 0.4
-                    ? { labelText: 'Bearish', labelColor: 'text-red-600' }
-                    : { labelText: 'Neutral', labelColor: 'text-yellow-600' };
-
-            sentimentLabel.textContent = labelText;
-            sentimentLabel.className = `text-center text-lg font-semibold ${labelColor}`;
-
-            // Update sentiment breakdown bars and percentages
-            ['positive', 'neutral', 'negative'].forEach(sentiment => {
-                const bar = document.getElementById(`${sentiment}Bar`);
-                const percentage = document.getElementById(`${sentiment}Percentage`);
-
-                if (bar && percentage) {
-                    const percentageValue = processedData[`${sentiment}_percentage`];
-                    console.log(percentageValue);
-                    // Set the width of the bar based on percentage
-                    bar.style.width = `${percentageValue}%`;
-
-                    // Set the text content of the percentage
-                    percentage.textContent = `${percentageValue}%`;
+                    ;
+                    tbody2.insertAdjacentHTML('beforeend', row);
                 }
-            });
 
-            // Update recent mentions
-            const mentionsContainer = document.getElementById('recentMentions');
+            };
 
-            if (processedData.recent_mentions.length === 0) {
-                mentionsContainer.innerHTML = `
+
+            const updatePlots = (data) => {
+
+                const obvLayout = {
+                    title: {
+                        text: 'On-Balance Volume Trend',
+                        font: {size: 24, color: '#1F2937'}
+                    },
+                    xaxis: {
+                        title: 'Time Period',
+                        gridcolor: '#E5E7EB'
+                    },
+                    yaxis: {
+                        title: 'OBV Value',
+                        gridcolor: '#E5E7EB'
+                    },
+                    paper_bgcolor: 'white',
+                    plot_bgcolor: 'white',
+                    showlegend: true,
+                    legend: {
+                        x: 0,
+                        y: 1.1,
+                        orientation: 'h'
+                    },
+                    margin: {t: 50, l: 50, r: 20, b: 50}
+                };
+
+
+                const obvData = [
+                    {
+                        x: data['analysis']['1d']['date'],
+                        y: data['analysis']['1d']['OBV'],
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '1 Day',
+                        line: {color: '#60A5FA'}
+                    },
+                    {
+                        x: data['analysis']['1w']['date'],
+                        y: data['analysis']['1w']['OBV'],
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '1 Week',
+                        line: {color: '#2563EB'}
+                    },
+                    {
+                        x: data['analysis']['1m']['date'],
+                        y: data['analysis']['1m']['OBV'],
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '1 Month',
+                        line: {color: '#1E40AF'}
+                    }
+                ];
+
+                const macdLayout = {
+                    title: {
+                        text: 'MACD Trend',
+                        font: {size: 24, color: '#1F2937'}
+                    },
+                    xaxis: {
+                        title: 'Time Period',
+                        gridcolor: '#E5E7EB'
+                    },
+                    yaxis: {
+                        title: 'MACD Value',
+                        gridcolor: '#E5E7EB'
+                    },
+                    paper_bgcolor: 'white',
+                    plot_bgcolor: 'white',
+                    showlegend: true,
+                    legend: {
+                        x: 0,
+                        y: 1.1,
+                        orientation: 'h'
+                    },
+                    margin: {t: 50, l: 50, r: 20, b: 50}
+                };
+
+                const macdData = [
+                    {
+                        x: data['analysis']['1d']['date'],
+                        y: data['analysis']['1d']['MACD'],
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '1 Day',
+                        line: {color: '#60A5FA'}
+                    },
+                    {
+                        x: data['analysis']['1w']['date'],
+                        y: data['analysis']['1w']['MACD'],
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: '1 Week',
+                        line: {color: '#2563EB'}
+                    },
+                    {
+                        x: data['analysis']['1m']['date'],
+                        y: data['analysis']['1m']['MACD'],
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: '1 Month',
+                        line: {color: '#1E40AF'}
+                    }
+                ];
+
+
+                const priceLayout = {
+                    title: {
+                        text: 'PRICE Trend',
+                        font: {size: 24, color: '#1F2937'}
+                    },
+                    xaxis: {
+                        title: 'Time Period',
+                        gridcolor: '#E5E7EB'
+                    },
+                    yaxis: {
+                        title: 'PRICE Value in DEN',
+                        gridcolor: '#E5E7EB'
+                    },
+                    paper_bgcolor: 'white',
+                    plot_bgcolor: 'white',
+                    showlegend: true,
+                    legend: {
+                        x: 0,
+                        y: 1.1,
+                        orientation: 'h'
+                    },
+                    margin: {t: 50, l: 50, r: 20, b: 50}
+                };
+
+                const x_ = data['historical_data'].map(item => item.Date);
+                const y_ = data['historical_data'].map(item => item['Last trade price']);
+
+
+                const priceData = [
+                    {
+                        x: [...x_].reverse(),
+                        y: [...y_].reverse(),
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: 'Price movement',
+                        line: {color: '#60A5FA'}
+                    }
+                ];
+
+
+                Plotly.newPlot('macdChart', macdData, macdLayout, {responsive: true});
+                Plotly.newPlot('obvChart', obvData, obvLayout, {responsive: true});
+                Plotly.newPlot('priceplot', priceData, priceLayout, {responsive: true});
+            };
+
+            const stockCode_ = document.getElementById('stock_code').textContent;
+            const loadingOverlay = document.getElementById('loading-overlay');
+
+            {##}
+
+            const processSentimentData = (data) => {
+                // Check if sentiment data exists and has entries
+                if (!data['sentiment_analysis'] || !data['sentiment_analysis'].length) {
+                    return {
+                        overall_score: 0.5,
+                        positive_percentage: "0.0",
+                        neutral_percentage: "100.0",
+                        negative_percentage: "0.0",
+                        recent_mentions: []
+                    };
+                }
+
+                const sentiments = data['sentiment_analysis'].flatMap(item =>
+                    item['sentiment'].split(', '));
+
+                const total = sentiments.length || 1; // Prevent division by zero
+                const sentimentCounts = {
+                    Positive: sentiments.filter(s => s === 'Positive').length,
+                    Neutral: sentiments.filter(s => s === 'Neutral').length,
+                    Negative: sentiments.filter(s => s === 'Negative').length
+                };
+
+                return {
+                    overall_score: (sentimentCounts.Positive + sentimentCounts.Neutral * 0.5) / total,
+                    positive_percentage: ((sentimentCounts.Positive / total) * 100).toFixed(1),
+                    neutral_percentage: ((sentimentCounts.Neutral / total) * 100).toFixed(1),
+                    negative_percentage: ((sentimentCounts.Negative / total) * 100).toFixed(1),
+                    recent_mentions: data['sentiment_analysis'].slice(0, 5).map(article => ({
+                        text: article.title || 'No Title',
+                        sentiment: article['sentiment'].split(', ')
+                                .filter(s => s === 'Positive').length /
+                            article['sentiment'].split(', ').length,
+                        source: new URL(article.link).hostname,
+                        time: article.date,
+                        content: (article.content || 'No content available').substring(100, 200) + '...',
+                        link: article.link
+                    }))
+                };
+            };
+
+            const updateSentimentUI = (data) => {
+                const processedData = processSentimentData(data);
+
+                // Update overall sentiment score
+                const sentimentScoreDiv = document.getElementById('sentimentScore');
+                sentimentScoreDiv.innerHTML = `${(processedData.overall_score * 100).toFixed(1)}%`;
+
+                const sentimentLabel = document.getElementById('sentimentLabel');
+                const {labelText, labelColor} = processedData.overall_score >= 0.6
+                    ? {labelText: 'Bullish', labelColor: 'text-green-600'}
+                    : processedData.overall_score <= 0.4
+                        ? {labelText: 'Bearish', labelColor: 'text-red-600'}
+                        : {labelText: 'Neutral', labelColor: 'text-yellow-600'};
+
+                sentimentLabel.textContent = labelText;
+                sentimentLabel.className = `text-center text-lg font-semibold ${labelColor}`;
+
+                // Update sentiment breakdown bars and percentages
+                ['positive', 'neutral', 'negative'].forEach(sentiment => {
+                    const bar = document.getElementById(`${sentiment}Bar`);
+                    const percentage = document.getElementById(`${sentiment}Percentage`);
+
+                    if (bar && percentage) {
+                        const percentageValue = processedData[`${sentiment}_percentage`];
+                        console.log(percentageValue);
+                        // Set the width of the bar based on percentage
+                        bar.style.width = `${percentageValue}%`;
+
+                        // Set the text content of the percentage
+                        percentage.textContent = `${percentageValue}%`;
+                    }
+                });
+
+                // Update recent mentions
+                const mentionsContainer = document.getElementById('recentMentions');
+
+                if (processedData.recent_mentions.length === 0) {
+                    mentionsContainer.innerHTML = `
                     <div class="text-center text-gray-500">
                         No recent mentions available
                     </div>`;
-            } else {
-                mentionsContainer.innerHTML = processedData.recent_mentions
-                    .map(mention => `
+                } else {
+                    mentionsContainer.innerHTML = processedData.recent_mentions
+                        .map(mention => `
                         <div class="border-l-4 ${
                             mention.sentiment > 0.5 ? 'border-green-500' :
-                            mention.sentiment < 0.5 ? 'border-red-500' :
-                            'border-yellow-500'
+                                mention.sentiment < 0.5 ? 'border-red-500' :
+                                    'border-yellow-500'
                         } pl-4 mb-6 p-4 rounded-lg shadow-lg bg-white">
                             <p class="text-xl font-semibold text-gray-900">${mention.text}</p>
                             <p class="text-sm text-black mt-2">${mention.content}</p>
@@ -537,70 +579,71 @@ document.addEventListener('DOMContentLoaded', () => {
                             </a>
                         </div>
                     `).join('');
-            }
-        };
+                }
+            };
 
-        const fetchAnalysis = (range) => {
-            loadingOverlay.classList.remove('hidden');  // Show loading
+            const fetchAnalysis = (range) => {
+                loadingOverlay.classList.remove('hidden');  // Show loading
 
-            fetch(`/stocks/${stockCode_}/technical-analysis/`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (!data) {
-                        throw new Error('No data received from the server.');
-                    }
+                fetch(`/stocks/${stockCode_}/technical-analysis/`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (!data) {
+                            throw new Error('No data received from the server.');
+                        }
 
-                    updateTable(data);
-                    updatePlots(data);
-                    if (data['sentiment_analysis'] && Object.keys(data['sentiment_analysis']).length > 0) {
-                        processSentimentData(data);
-                        updateSentimentUI(data);
-                    } else {
-                        console.warn('No sentiment analysis data available.');
-                    }
+                        updateTable(data);
+                        updatePlots(data);
+                        if (data['sentiment_analysis'] && Object.keys(data['sentiment_analysis']).length > 0) {
+                            processSentimentData(data);
+                            updateSentimentUI(data);
+                        } else {
+                            console.warn('No sentiment analysis data available.');
+                        }
 
-                    loadingOverlay.classList.add('hidden');  // Hide loading
-                })
-                .catch(error => {
-                    console.error('Error:', error.message);
-                    loadingOverlay.classList.add('hidden');  // Hide loading on error
+                        loadingOverlay.classList.add('hidden');  // Hide loading
+                    })
+                    .catch(error => {
+                        console.error('Error:', error.message);
+                        loadingOverlay.classList.add('hidden');  // Hide loading on error
+                    });
+            };
+
+            // Set up event listeners for time range buttons
+            document.querySelectorAll('.time-range-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    // Remove active state from all buttons
+                    document.querySelectorAll('.time-range-btn').forEach(btn => {
+                        btn.classList.remove('bg-indigo-800');
+                    });
+                    // Add active state to clicked button
+                    e.target.classList.add('bg-indigo-800');
+                    const range = e.target.getAttribute('data-range');
+                    fetchAnalysis(range);
                 });
-        };
-
-        // Set up event listeners for time range buttons
-        document.querySelectorAll('.time-range-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                // Remove active state from all buttons
-                document.querySelectorAll('.time-range-btn').forEach(btn => {
-                    btn.classList.remove('bg-indigo-800');
-                });
-                // Add active state to clicked button
-                e.target.classList.add('bg-indigo-800');
-                const range = e.target.getAttribute('data-range');
-                fetchAnalysis(range);
             });
+            fetchAnalysis();
         });
-        fetchAnalysis();
-    });
-</script>
+    </script>
     <style>
-        th{
+        th {
             font-weight: bolder !important;
         }
+
         #recentMentions {
             max-height: 400px;
             overflow-y: auto;
         }
 
         #recentMentions {
-        max-height: 400px;
-        overflow-y: auto;
-        padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
         }
 
         #recentMentions .border-l-4 {

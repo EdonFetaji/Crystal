@@ -31,7 +31,7 @@ class Stock(models.Model):
         return [" ".join(word for word in name.split() if word not in unwanted) for name in names if name]
 
 
-class ApplicationUser(models.Model):
+class   ApplicationUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='app_user')
     watchlist = models.ManyToManyField(Stock, related_name='watched_by', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

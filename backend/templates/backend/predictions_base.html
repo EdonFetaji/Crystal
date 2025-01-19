@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="min-h-screen bg-gradient-to-r from-gray-800 via-gray-700 to-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+
+        <div class="text-center text-white space-y-8 p-10 bg-opacity-90 rounded-xl shadow-lg max-w-lg w-full border-4 border-blue-500 hover:shadow-xl hover:border-blue-700 transition-all duration-300">
+            <h1 class="text-4xl font-extrabold tracking-wide animate__animated animate__fadeIn animate__delay-1s">
+                Crystal Clear Predictions
+            </h1>
+
+            <form id="searchForm" method="get"
+                  class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4 w-full">
+                <div class="relative w-full sm:w-[550px]">
+                    <input id="tags" name="stock_code" placeholder="Search stock..."
+                           class="w-full border-2 border-gray-500 rounded-lg py-3 pl-10 pr-4 text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-lg transition-all duration-300 hover:border-blue-400">
+                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                         width="24" height="24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M10 17l5-5m0 0l-5-5m5 5H3"></path>
+                    </svg>
+                </div>
+
+                <button type="button" onclick="redirectToPrediction()"
+                        class="mt-2 sm:mt-0 bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 border-2 border-blue-500 hover:border-blue-700">
+                    Search
+                </button>
+            </form>
+
+            <div class="mt-4">
+                <a href="{% url 'stock_list' %}"
+                   class="text-white text-lg hover:text-gray-200 underline transition duration-200">
+                    Show all stocks!
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Background and overall form styling */
+        .bg-gradient-to-r {
+            background-size: 400% 400%;
+            animation: gradientAnimation 15s ease infinite;
+        }
+
+        @keyframes gradientAnimation {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Add some cool animations */
+        .animate__fadeIn {
+            animation: fadeIn 4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        #tags {
+            color: black;
+        }
+
+        .ui-autocomplete {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    float: left;
+    display: none;
+    min-width: 160px;
+    padding: 4px 0;
+    margin: 0 0 10px 25px;
+    list-style: none;
+    background-color: #ffffff;
+    border-color: #ccc;
+    border-color: rgba(0, 0, 0, 0.2);
+    border-style: solid;
+    border-width: 1px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+    -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+    -webkit-background-clip: padding-box;
+    -moz-background-clip: padding;
+    background-clip: padding-box;
+    *border-right-width: 2px;
+    *border-bottom-width: 2px;
+}
+
+.ui-menu-item > a.ui-corner-all {
+    display: block;
+    padding: 3px 15px;
+    clear: both;
+    font-weight: normal;
+    line-height: 18px;
+    color: #555555;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.ui-state-hover, .ui-state-active {
+    color: #ffffff;
+    text-decoration: none;
+    background-color: #0088cc;
+    border-radius: 0px;
+    -webkit-border-radius: 0px;
+    -moz-border-radius: 0px;
+    background-image: none;
+}
+
+
+    </style>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
+    <script>
+        $(function () {
+            var stockCodes = [ {% for stock in stocks %} "{{ stock.code }}", {% endfor %} ];
+
+            $("#tags").autocomplete({
+                source: stockCodes,
+                minLength: 1
+            });
+        });
+
+        function redirectToPrediction() {
+            var stockCode = $("#tags").val()
+            if (stockCode) {
+                window.location.href = "/stocks/predictions/" + stockCode;
+            } else {
+                alert("Please select a stock first!");
+            }
+        }
+    </script>
+
+{% endblock %}
